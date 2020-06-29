@@ -1,0 +1,8 @@
+.ac-view {
+    padding-left: 3px !important; 
+}
+
+.ac.vision {
+    width: calc(100% - 7px);
+    box-sizing: content-box;
+}

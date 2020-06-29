@@ -1,0 +1,21 @@
+{
+  "name": "iNaturalist Enhancement Suite",
+  "description" : "Base Level Extension",
+  "version": "0.1",
+  "manifest_version": 2,
+  "permissions": [
+    "storage"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.inaturalist.org/*"],
+      "js": ["arrive-2.4.1.min.js","content.js"],
+	    "run_at": "document_start"
+    }
+ ],
+ "web_accessible_resources": ["gradient.css","sidebar.css","fetch.js"]
+}
