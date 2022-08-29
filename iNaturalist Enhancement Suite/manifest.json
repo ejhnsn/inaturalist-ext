@@ -1,8 +1,8 @@
 {
   "name": "iNaturalist Enhancement Suite",
-  "description" : "Base Level Extension",
-  "version": "0.1.1",
-  "manifest_version": 2,
+  "description" : "Adds functionality to iNaturalist",
+  "version": "0.3.0",
+  "manifest_version": 3,
   "icons": { 
     "16": "icon16.png",
     "48": "icon48.png",
@@ -21,6 +21,9 @@
       "js": ["arrive-2.4.1.min.js","content.js"],
 	    "run_at": "document_start"
     }
- ],
- "web_accessible_resources": ["gradient.css","sidebar.css","fetch.js"]
+  ],
+  "web_accessible_resources": [{
+    "resources": ["gradient.css","sidebar.css","fetch.js"],
+    "matches": ["https://*/*"]
+  }]
 }
