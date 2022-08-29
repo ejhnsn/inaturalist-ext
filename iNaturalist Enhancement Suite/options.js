@@ -1,13 +1,13 @@
 function saveOptions() {
-    var enableColorVision = document.getElementById('color-vision').checked;
-    var colorDisplayMode = document.querySelector('input[name="color-display-mode"]:checked').value;
-    var enableColorBlindMode = document.getElementById('color-blind').checked;
+    const enableColorVision = document.getElementById('color-vision').checked;
+    const colorDisplayMode = document.querySelector('input[name="color-display-mode"]:checked').value;
+    const enableColorBlindMode = document.getElementById('color-blind').checked;
     chrome.storage.sync.set({
         enableColorVision: enableColorVision,
         colorDisplayMode: colorDisplayMode,
         enableColorBlindMode: enableColorBlindMode
     }, function() {
-        var status = document.getElementById('status');
+        const status = document.getElementById('status');
         status.textContent = 'Options saved.';
         setTimeout(function() {
             status.textContent = '';
@@ -29,9 +29,7 @@ function restoreOptions() {
 }
 
 function toggleColorVisionDisplay() {
-    var features = document.getElementById('color-vision-features');
-    alert(this);
-    alert(this.checked);
+    const features = document.getElementById('color-vision-features');
     if (this.checked) {
         features.style.display = 'block';
     } else {
@@ -39,7 +37,7 @@ function toggleColorVisionDisplay() {
     }
 }
 
-var colorVisionFeature = document.getElementById('color-vision');
+const colorVisionFeature = document.getElementById('color-vision');
 colorVisionFeature.addEventListener('change', toggleColorVisionDisplay);
 document.addEventListener('DOMContentLoaded', restoreOptions);
 document.getElementById('save').addEventListener('click', saveOptions);

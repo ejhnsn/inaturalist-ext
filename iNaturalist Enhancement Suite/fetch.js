@@ -10,7 +10,7 @@ window.fetch = function() {
 							.clone()
 							.json()
 							.then(data => {
-								document.dispatchEvent(new CustomEvent("computerVisionResponse", {detail: data}));
+								document.dispatchEvent(new CustomEvent("computerVisionResponse", { detail: data }));
 								resolve(response);
 							})
 							.catch(error => {

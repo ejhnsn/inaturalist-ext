@@ -5,7 +5,7 @@ chrome.storage.sync.get({
 		return;
 	}
 	
-	var script = document.createElement('script');
+	const script = document.createElement('script');
 	script.src = chrome.runtime.getURL('fetch.js');
 	script.onload = function() {
 		document.addEventListener("computerVisionResponse", e => {
@@ -19,17 +19,18 @@ chrome.storage.sync.get({
 				return;
 			}
 			
-			var taxonId = this.getAttribute('data-taxon-id');
-			var result = computerVision.results.find(t => t.taxon.id == taxonId);
+			const taxonId = this.getAttribute('data-taxon-id');
+			const result = computerVision.results.find(t => t.taxon.id == taxonId);
+			let score;
 			if (result) {
-				var score = result.combined_score;
+				score = result.combined_score;
 			} else if (computerVision.common_ancestor && computerVision.common_ancestor.taxon && computerVision.common_ancestor.taxon.id == taxonId) {
-				var score = computerVision.common_ancestor.score;
+				score = computerVision.common_ancestor.score;
 			}
 			
 			if (score) {
-				var hue = score * 1.2;
-				var element = this;
+				const hue = score * 1.2;
+				const element = this;
 				chrome.storage.sync.get({
 					colorDisplayMode: 'sidebar',
 					enableColorBlindMode: false
@@ -56,7 +57,7 @@ chrome.storage.sync.get({
 	chrome.storage.sync.get({
 		colorDisplayMode: 'sidebar'
 	}, function(items) {
-		var link = document.createElement('link');
+		const link = document.createElement('link');
 		link.type = 'text/css';
 		link.rel = 'stylesheet';
 		link.href = chrome.runtime.getURL(items.colorDisplayMode + '.css');
@@ -64,8 +65,8 @@ chrome.storage.sync.get({
 	});
 });
 
-var computerVision;
-var updateMenuWidth;
+let computerVision;
+let updateMenuWidth;
 
 function updateMenuWidthInner() {
 	var menu = document.getElementsByClassName("ac-menu")[0];
