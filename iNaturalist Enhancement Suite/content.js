@@ -29,8 +29,8 @@ chrome.storage.sync.get({
 			}
 			
 			if (score) {
-				const hue = score * 1.2;
 				const element = this;
+				let hue = score * 1.2;
 				chrome.storage.sync.get({
 					colorDisplayMode: 'sidebar',
 					enableColorBlindMode: false
