@@ -4,22 +4,87 @@ chrome.storage.sync.get({
 	if (!items.enableColorVision) {
 		return;
 	}
+
+	let currentObservation;
+	let computerVisionResults = new Map();
 	
 	const script = document.createElement('script');
 	script.src = chrome.runtime.getURL('fetch.js');
 	script.onload = function() {
-		document.addEventListener("computerVisionResponse", e => {
-			if (e.detail && e.detail.results) {
-				computerVision = e.detail;
+		document.addEventListener("computerVisionResponse", event => {
+			const detail = event.detail;
+			if (detail && detail.data) {
+				const key = `${detail.latitude}-${detail.longitude}-${detail.datetime}`;
+				console.log(key);
+				computerVisionResults.set(key, detail.data);
 			}	 
 		});
 
-		document.arrive(".ac.vision", function() {
-			if (!computerVision || !computerVision.results) {
+		document.arrive('input.input-sm[placeholder="Location"]', input => {
+			input.addEventListener('click', event => { 
+				currentObservation = event.path[1];
+				for (const type of ['latitude', 'longitude']) {
+					const span = document.createElement('span');
+					span.setAttribute('class', `${type}-container`);
+					span.style.display = 'none';
+					currentObservation.appendChild(span);
+				}
+			 });
+		});
+
+		document.arrive('div.modal-footer', footer => {
+			const button = footer.querySelector('button.btn-primary');
+			if (button) {
+				button.addEventListener('click', event => {
+					const lat = currentObservation.querySelector('.latitude-container');
+					const long = currentObservation.querySelector('.longitude-container');
+					const modalBody = event.path[1].previousElementSibling;
+					const spans = modalBody.querySelectorAll('span[class="label-text"]');
+					for (const span of spans) {
+						const input = span.nextElementSibling;
+						const type = span.innerHTML;
+						switch (type) {
+							case 'Latitude':
+								lat.innerHTML = input.value;
+								break;
+							
+							case 'Longitude':
+								long.innerHTML = input.value;
+								break;
+						}
+					}
+				});
+			}
+		});
+
+		document.arrive(".ac.vision", div => {
+			const caption = div.parentNode.parentNode.parentNode.parentNode;
+			let lat = null;
+			let long = null;
+			let datetime = null;
+			let container = caption.querySelector('.latitude-container');
+			if (container) {
+				lat = container.innerHTML;
+			}
+
+			container = caption.querySelector('.longitude-container');
+			if (container) {
+				long = container.innerHTML;
+			}
+
+			container = caption.querySelector('input[placeholder="Date"]');
+			if (container) {
+				datetime = container.value || null;
+			}
+
+			const key = `${lat}-${long}-${datetime}`;
+			console.log(key);
+			const computerVision = computerVisionResults.get(key);
+			if (!computerVision) {
 				return;
 			}
-			
-			const taxonId = this.getAttribute('data-taxon-id');
+
+			const taxonId = div.getAttribute('data-taxon-id');
 			const result = computerVision.results.find(t => t.taxon.id == taxonId);
 			let score;
 			if (result) {
@@ -29,7 +94,6 @@ chrome.storage.sync.get({
 			}
 			
 			if (score) {
-				const element = this;
 				let hue = score * 1.2;
 				chrome.storage.sync.get({
 					colorDisplayMode: 'sidebar',
@@ -40,10 +104,10 @@ chrome.storage.sync.get({
 					}
 
 					if (items.colorDisplayMode === 'gradient') {
-						element.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
+						div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
 					} else {
 						updateMenuWidth();
-						element.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
+						div.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
 					}
 				});
 			}
@@ -65,7 +129,6 @@ chrome.storage.sync.get({
 	});
 });
 
-let computerVision;
 let updateMenuWidth;
 
 function updateMenuWidthInner() {

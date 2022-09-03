@@ -1,31 +1,39 @@
 const oldFetch = window.fetch;
-window.fetch = function() {
-	return new Promise((resolve, reject) => {
-		oldFetch
-			.apply(this, arguments)
-			.then(response => {
-				try {
-					if (response && response.url && response.url.startsWith("https://api.inaturalist.org/v1/computervision/")) {
-						response
-							.clone()
-							.json()
-							.then(data => {
-								document.dispatchEvent(new CustomEvent("computerVisionResponse", { detail: data }));
-								resolve(response);
-							})
-							.catch(error => {
-								// if the response wasn't JSON it's not our error
-								reject(error);
-							});				
-					} else {
-						resolve(response);
+window.fetch = async (url, options) => {
+    const response = await oldFetch(url, options);
+
+	try {
+		if (url.startsWith("https://api.inaturalist.org/v1/computervision")) {
+			const data = await response.clone().json();
+
+			if (data) {
+				let latitude = null;
+				let longitude = null;
+				let datetime = null;
+				if (options) {
+					const formData = options.body;
+					if (formData) {
+						latitude = formData.get("lat");
+						longitude = formData.get("lng");
+						datetime = formData.get("observed_on");
 					}
-				} catch (error) {
-					resolve(response);
 				}
-			})
-			.catch(error => {
-				reject(error);
-			});
-	});
+
+				document.dispatchEvent(
+					new CustomEvent("computerVisionResponse", { 
+						detail: {
+							data,
+							latitude,
+							longitude,
+							datetime
+						}
+					})
+				);
+			}
+		}
+	} catch (err) {
+		console.error(err);
+	}
+    
+	return response;
 };
