@@ -15,7 +15,6 @@ chrome.storage.sync.get({
 			const detail = event.detail;
 			if (detail && detail.data) {
 				const key = `${detail.latitude}-${detail.longitude}-${detail.datetime}`;
-				console.log(key);
 				computerVisionResults.set(key, detail.data);
 			}	 
 		});
@@ -36,8 +35,8 @@ chrome.storage.sync.get({
 			const button = footer.querySelector('button.btn-primary');
 			if (button) {
 				button.addEventListener('click', event => {
-					const lat = currentObservation.querySelector('.latitude-container');
-					const long = currentObservation.querySelector('.longitude-container');
+					const lat = currentObservation.querySelector('span.latitude-container');
+					const long = currentObservation.querySelector('span.longitude-container');
 					const modalBody = event.path[1].previousElementSibling;
 					const spans = modalBody.querySelectorAll('span[class="label-text"]');
 					for (const span of spans) {
@@ -57,63 +56,99 @@ chrome.storage.sync.get({
 			}
 		});
 
-		document.arrive(".ac.vision", div => {
-			const caption = div.parentNode.parentNode.parentNode.parentNode;
-			let lat = null;
-			let long = null;
-			let datetime = null;
-			let container = caption.querySelector('.latitude-container');
-			if (container) {
-				lat = container.innerHTML;
-			}
+		document.arrive('div.TaxonAutocomplete > ul', ul => {
+			function observeCallback(mutations) {
+				for (const mutation of mutations) {
+					const element = mutation.target;
+					const caption = element.parentNode.parentNode;
 
-			container = caption.querySelector('.longitude-container');
-			if (container) {
-				long = container.innerHTML;
-			}
+					switch (mutation.type) {
+						case 'childList': {
+							const divs = element.querySelectorAll('div.ac.vision');
+							if (!divs.length || caption.classList.contains('colorized')) {
+								return;
+							}
+	
+							let lat = null;
+							let long = null;
+							let datetime = null;
+							let container = caption.querySelector('span.latitude-container');
+							if (container) {
+								lat = container.innerHTML;
+							}
+						
+							container = caption.querySelector('span.longitude-container');
+							if (container) {
+								long = container.innerHTML;
+							}
+						
+							container = caption.querySelector('input[placeholder="Date"]');
+							if (container) {
+								datetime = container.value || null;
+							}
+						
+							const key = `${lat}-${long}-${datetime}`;
+							const computerVision = computerVisionResults.get(key);
+							if (!computerVision) {
+								return;
+							}
+						
+							for (const div of divs) {
+								const taxonId = div.getAttribute('data-taxon-id');
+								const result = computerVision.results.find(t => t.taxon.id == taxonId);
+								let score;
+								if (result) {
+									score = result.combined_score;
+								} else if (computerVision.common_ancestor && computerVision.common_ancestor.taxon && computerVision.common_ancestor.taxon.id == taxonId) {
+									score = computerVision.common_ancestor.score;
+								}
+								
+								if (score) {
+									let hue = score * 1.2;
+									chrome.storage.sync.get({
+										colorDisplayMode: 'sidebar',
+										enableColorBlindMode: false
+									}, function(items) {
+										if (items.enableColorBlindMode) {
+											hue = hue * -1 + 240;
+										}
+						
+										if (items.colorDisplayMode === 'gradient') {
+											div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
+										} else {
+											updateMenuWidth();
+											div.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
+										}
+									});
+								}
+							}
+	
+							caption.classList.add('colorized');
 
-			container = caption.querySelector('input[placeholder="Date"]');
-			if (container) {
-				datetime = container.value || null;
-			}
+							break;
+						}
 
-			const key = `${lat}-${long}-${datetime}`;
-			console.log(key);
-			const computerVision = computerVisionResults.get(key);
-			if (!computerVision) {
-				return;
-			}
+						case 'attributes': {
+							if (!mutation.target.classList.contains('open') && mutation.oldValue.indexOf(' open')) {
+								caption.classList.remove('colorized');
+							}
 
-			const taxonId = div.getAttribute('data-taxon-id');
-			const result = computerVision.results.find(t => t.taxon.id == taxonId);
-			let score;
-			if (result) {
-				score = result.combined_score;
-			} else if (computerVision.common_ancestor && computerVision.common_ancestor.taxon && computerVision.common_ancestor.taxon.id == taxonId) {
-				score = computerVision.common_ancestor.score;
+							break;
+						}
+					}
+				}
 			}
 			
-			if (score) {
-				let hue = score * 1.2;
-				chrome.storage.sync.get({
-					colorDisplayMode: 'sidebar',
-					enableColorBlindMode: false
-				}, function(items) {
-					if (items.enableColorBlindMode) {
-						hue = hue * -1 + 240;
-					}
+			const observer = new MutationObserver(observeCallback);
+			const options = { 
+				childList: true, 
+				subtree: true, 
+				attributeFilter: ['class'], 
+				attributeOldValue: true 
+			};
 
-					if (items.colorDisplayMode === 'gradient') {
-						div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
-					} else {
-						updateMenuWidth();
-						div.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
-					}
-				});
-			}
+			observer.observe(ul, options);
 		});
-
-		document.leave('.ac.vision', initializeUpdateMenuWidth);
 	}
 
 	document.documentElement.appendChild(script);

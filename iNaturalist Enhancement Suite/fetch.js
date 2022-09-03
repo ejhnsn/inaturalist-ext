@@ -19,15 +19,17 @@ window.fetch = async (url, options) => {
 					}
 				}
 
+				const payload = { 
+					detail: {
+						data,
+						latitude,
+						longitude,
+						datetime
+					}
+				};
+
 				document.dispatchEvent(
-					new CustomEvent("computerVisionResponse", { 
-						detail: {
-							data,
-							latitude,
-							longitude,
-							datetime
-						}
-					})
+					new CustomEvent("computerVisionResponse", payload)
 				);
 			}
 		}
