@@ -5,13 +5,13 @@ chrome.storage.sync.get({
 		return;
 	}
 
-	let currentObservation;
 	let computerVisionResults = new Map();
 	
 	const script = document.createElement('script');
 	script.src = chrome.runtime.getURL('fetch.js');
 	script.onload = function() {
-		document.addEventListener("computerVisionResponse", event => {
+		// cache the CV response for a photo
+		document.addEventListener('computerVisionResponse', event => {
 			const detail = event.detail;
 			if (detail && detail.data) {
 				const key = `${detail.latitude}-${detail.longitude}-${detail.datetime}`;
@@ -19,24 +19,23 @@ chrome.storage.sync.get({
 			}	 
 		});
 
+		// initialize lat/long containers
 		document.arrive('input.input-sm[placeholder="Location"]', input => {
-			input.addEventListener('click', event => { 
-				currentObservation = event.path[1];
-				for (const type of ['latitude', 'longitude']) {
-					const span = document.createElement('span');
-					span.setAttribute('class', `${type}-container`);
-					span.style.display = 'none';
-					currentObservation.appendChild(span);
-				}
-			 });
+			for (const type of ['latitude', 'longitude']) {
+				const span = document.createElement('span');
+				span.setAttribute('class', `${type}-container`);
+				span.style.display = 'none';
+				input.parentNode.appendChild(span);
+			}
 		});
 
-		document.arrive('div.modal-footer', footer => {
-			const button = footer.querySelector('button.btn-primary');
-			if (button) {
-				button.addEventListener('click', event => {
-					const lat = currentObservation.querySelector('span.latitude-container');
-					const long = currentObservation.querySelector('span.longitude-container');
+		// store lat/long values in containers on "save" from modal
+		document.arrive('div.modal-footer > button.btn-primary', button => {
+			button.addEventListener('click', event => {
+				const selected = document.querySelectorAll('div.selected');
+				for (const observation of selected) {
+					const lat = observation.querySelector('span.latitude-container');
+					const long = observation.querySelector('span.longitude-container');
 					const modalBody = event.path[1].previousElementSibling;
 					const spans = modalBody.querySelectorAll('span[class="label-text"]');
 					for (const span of spans) {
@@ -52,39 +51,63 @@ chrome.storage.sync.get({
 								break;
 						}
 					}
-				});
-			}
+				}
+			});
 		});
 
+		// colorization
 		document.arrive('div.TaxonAutocomplete > ul', ul => {
+			// triggered when the subtree changes, i.e. the CV rows are created, or classes are added/removed
 			function observeCallback(mutations) {
 				for (const mutation of mutations) {
 					const element = mutation.target;
-					const caption = element.parentNode.parentNode;
-
 					switch (mutation.type) {
 						case 'childList': {
 							const divs = element.querySelectorAll('div.ac.vision');
-							if (!divs.length || caption.classList.contains('colorized')) {
+
+							// short-circuit if the CV rows haven't been populated yet
+							if (!divs.length) {
+								return;
+							}
+
+							let parent = element.parentNode;
+
+							// in the upload workflow, we need to find a stable parent element which won't overwrite our class
+							if (location.href.indexOf('upload') > -1) {
+								do {
+									if (parent.tagName.toLowerCase() === 'div' && parent.classList.contains('caption')) {
+										break;
+									}
+
+									parent = parent.parentNode;
+								} while (parent.parentNode);
+							}
+							
+							// short-circuit if we've already colorized the CV rows
+							if (parent && parent.classList.contains('colorized')) {
 								return;
 							}
 	
 							let lat = null;
 							let long = null;
 							let datetime = null;
-							let container = caption.querySelector('span.latitude-container');
-							if (container) {
-								lat = container.innerHTML;
-							}
-						
-							container = caption.querySelector('span.longitude-container');
-							if (container) {
-								long = container.innerHTML;
-							}
-						
-							container = caption.querySelector('input[placeholder="Date"]');
-							if (container) {
-								datetime = container.value || null;
+
+							// caption will only be truthy in the upload workflow
+							if (parent) {
+								let container = parent.querySelector('span.latitude-container');
+								if (container) {
+									lat = container.innerHTML || null;
+								}
+							
+								container = parent.querySelector('span.longitude-container');
+								if (container) {
+									long = container.innerHTML || null;
+								}
+							
+								container = parent.querySelector('input[placeholder="Date"]');
+								if (container) {
+									datetime = container.value || null;
+								}
 							}
 						
 							const key = `${lat}-${long}-${datetime}`;
@@ -93,6 +116,7 @@ chrome.storage.sync.get({
 								return;
 							}
 						
+							// color each suggestion based on the cached CV results
 							for (const div of divs) {
 								const taxonId = div.getAttribute('data-taxon-id');
 								const result = computerVision.results.find(t => t.taxon.id == taxonId);
@@ -123,14 +147,21 @@ chrome.storage.sync.get({
 								}
 							}
 	
-							caption.classList.add('colorized');
+							// flag that we've the colorization so we don't do it repeatedly based on meaningless (to us) churn in the CV list
+							if (parent) {
+								parent.classList.add('colorized');
+							}
 
 							break;
 						}
 
 						case 'attributes': {
-							if (!mutation.target.classList.contains('open') && mutation.oldValue.indexOf(' open')) {
-								caption.classList.remove('colorized');
+							// reset the flag so we do the colorization again when the CV menu is reopened
+							if (!mutation.target.classList.contains('open') && mutation.oldValue.indexOf(' open') > -1) {
+								const colorized = document.querySelector('div.colorized');
+								if (colorized) {
+									colorized.classList.remove('colorized');
+								}
 							}
 
 							break;
@@ -138,7 +169,8 @@ chrome.storage.sync.get({
 					}
 				}
 			}
-			
+
+			// listen for individual CV rows to be created
 			const observer = new MutationObserver(observeCallback);
 			const options = { 
 				childList: true, 
@@ -149,6 +181,8 @@ chrome.storage.sync.get({
 
 			observer.observe(ul, options);
 		});
+
+		document.leave('.ac.vision', initializeUpdateMenuWidth);
 	}
 
 	document.documentElement.appendChild(script);
@@ -167,8 +201,8 @@ chrome.storage.sync.get({
 let updateMenuWidth;
 
 function updateMenuWidthInner() {
-	var menu = document.getElementsByClassName("ac-menu")[0];
-	menu.style.width = parseInt(menu.style.width) + 7 + "px";
+	var menu = document.getElementsByClassName('ac-menu')[0];
+	menu.style.width = parseInt(menu.style.width) + 7 + 'px';
 }
 
 function initializeUpdateMenuWidth() {

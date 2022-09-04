@@ -3,7 +3,7 @@ window.fetch = async (url, options) => {
     const response = await oldFetch(url, options);
 
 	try {
-		if (url.startsWith("https://api.inaturalist.org/v1/computervision")) {
+		if (url.startsWith('https://api.inaturalist.org/v1/computervision')) {
 			const data = await response.clone().json();
 
 			if (data) {
@@ -13,9 +13,9 @@ window.fetch = async (url, options) => {
 				if (options) {
 					const formData = options.body;
 					if (formData) {
-						latitude = formData.get("lat");
-						longitude = formData.get("lng");
-						datetime = formData.get("observed_on");
+						latitude = formData.get('lat');
+						longitude = formData.get('lng');
+						datetime = formData.get('observed_on');
 					}
 				}
 
@@ -29,7 +29,7 @@ window.fetch = async (url, options) => {
 				};
 
 				document.dispatchEvent(
-					new CustomEvent("computerVisionResponse", payload)
+					new CustomEvent('computerVisionResponse', payload)
 				);
 			}
 		}
