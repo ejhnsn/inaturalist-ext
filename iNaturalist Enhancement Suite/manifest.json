@@ -1,7 +1,7 @@
 {
   "name": "iNaturalist Enhancement Suite",
   "description" : "Adds functionality to iNaturalist",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "manifest_version": 3,
   "icons": { 
     "16": "icon16.png",
