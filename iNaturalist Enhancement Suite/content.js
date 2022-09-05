@@ -5,16 +5,22 @@ chrome.storage.sync.get({
 		return;
 	}
 
-	let computerVisionResults = new Map();
+	const computerVisionResults = new Map();
 	
 	const script = document.createElement('script');
 	script.src = chrome.runtime.getURL('fetch.js');
 	script.onload = function() {
+		function round(value, decimals) {
+			return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
+		}
+
 		// cache the CV response for a photo
 		document.addEventListener('computerVisionResponse', event => {
 			const detail = event.detail;
 			if (detail && detail.data) {
-				const key = `${detail.latitude}-${detail.longitude}-${detail.datetime}`;
+				const latitude = round(detail.latitude, 10) || null;
+				const longitude = round(detail.longitude, 10) || null;
+				const key = `${latitude}-${longitude}-${detail.datetime}`;
 				computerVisionResults.set(key, detail.data);
 			}	 
 		});
@@ -29,13 +35,43 @@ chrome.storage.sync.get({
 			}
 		});
 
+		// store lat/long values in containers when auto-populated from image metadata
+		document.addEventListener('imageUpload', event => {
+			const detail = event.detail;
+			if (detail) {
+				const filename = detail.filename;
+				if (filename) {
+					const img = document.querySelector(`img[alt="${filename}"]`);
+
+					if (img) {
+						// find the proper parent div, from which we can get to the containers
+						const observations = document.querySelectorAll('div.cellDropzone');
+						let observation;
+						for (const o of observations) {
+							if (o.querySelector(`img[alt="${filename}"]`)) {
+								observation = o;
+								break;
+							}
+						}
+
+						if (observation) {
+							const latContainer = observation.querySelector('span.latitude-container');
+							const longContainer = observation.querySelector('span.longitude-container');
+							latContainer.innerHTML = detail.latitude;
+							longContainer.innerHTML = detail.longitude;
+						}
+					}
+				}
+			}	 
+		});
+
 		// store lat/long values in containers on "save" from modal
 		document.arrive('div.modal-footer > button.btn-primary', button => {
 			button.addEventListener('click', event => {
 				const selected = document.querySelectorAll('div.selected');
 				for (const observation of selected) {
-					const lat = observation.querySelector('span.latitude-container');
-					const long = observation.querySelector('span.longitude-container');
+					const latContainer = observation.querySelector('span.latitude-container');
+					const longContainer = observation.querySelector('span.longitude-container');
 					const modalBody = event.path[1].previousElementSibling;
 					const spans = modalBody.querySelectorAll('span[class="label-text"]');
 					for (const span of spans) {
@@ -43,11 +79,11 @@ chrome.storage.sync.get({
 						const type = span.innerHTML;
 						switch (type) {
 							case 'Latitude':
-								lat.innerHTML = input.value;
+								latContainer.innerHTML = input.value;
 								break;
 							
 							case 'Longitude':
-								long.innerHTML = input.value;
+								longContainer.innerHTML = input.value;
 								break;
 						}
 					}
@@ -70,7 +106,7 @@ chrome.storage.sync.get({
 								return;
 							}
 
-							let parent = element.parentNode;
+							let parent = element.parentElement;
 
 							// in the upload workflow, we need to find a stable parent element which won't overwrite our class
 							if (location.href.indexOf('upload') > -1) {
@@ -79,8 +115,8 @@ chrome.storage.sync.get({
 										break;
 									}
 
-									parent = parent.parentNode;
-								} while (parent.parentNode);
+									parent = parent.parentElement;
+								} while (parent.parentElement);
 							}
 							
 							// short-circuit if we've already colorized the CV rows
@@ -88,20 +124,20 @@ chrome.storage.sync.get({
 								return;
 							}
 	
-							let lat = null;
-							let long = null;
+							let latitude = null;
+							let longitude = null;
 							let datetime = null;
 
 							// caption will only be truthy in the upload workflow
 							if (parent) {
 								let container = parent.querySelector('span.latitude-container');
 								if (container) {
-									lat = container.innerHTML || null;
+									latitude = round(container.innerHTML, 10) || null;
 								}
 							
 								container = parent.querySelector('span.longitude-container');
 								if (container) {
-									long = container.innerHTML || null;
+									longitude = round(container.innerHTML, 10) || null;
 								}
 							
 								container = parent.querySelector('input[placeholder="Date"]');
@@ -110,7 +146,8 @@ chrome.storage.sync.get({
 								}
 							}
 						
-							const key = `${lat}-${long}-${datetime}`;
+
+							const key = `${latitude}-${longitude}-${datetime}`;
 							const computerVision = computerVisionResults.get(key);
 							if (!computerVision) {
 								return;
