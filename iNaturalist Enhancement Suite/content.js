@@ -1,58 +1,33 @@
 chrome.storage.sync.get({
-	enableColorVision: true
+	enableColorVision: true,
+	enableLogging: false
 }, function(items) {
 	if (!items.enableColorVision) {
 		return;
 	}
 
+	const LOGGING_ENABLED = items.enableLogging;
+	const DEFAULT_KEY_NAME = 'default';
 	let computerVisionResults = new Map();
 	
 	const script = document.createElement('script');
-	script.src = chrome.runtime.getURL('fetch.js');
+	script.src = chrome.runtime.getURL('domContext.js');
 	script.onload = function() {
 		// cache the CV response for a photo
 		document.addEventListener('computerVisionResponse', event => {
+			if (LOGGING_ENABLED) {
+				console.trace('computerVisionResponse handler', event.detail);
+			}
+
 			const detail = event.detail;
 			if (detail && detail.data) {
-				const key = `${detail.latitude}-${detail.longitude}-${detail.datetime}`;
+				const key = detail.filename || DEFAULT_KEY_NAME;
+				if (LOGGING_ENABLED) {
+ 					console.debug('key', key);
+				}
+
 				computerVisionResults.set(key, detail.data);
 			}	 
-		});
-
-		// initialize lat/long containers
-		document.arrive('input.input-sm[placeholder="Location"]', input => {
-			for (const type of ['latitude', 'longitude']) {
-				const span = document.createElement('span');
-				span.setAttribute('class', `${type}-container`);
-				span.style.display = 'none';
-				input.parentNode.appendChild(span);
-			}
-		});
-
-		// store lat/long values in containers on "save" from modal
-		document.arrive('div.modal-footer > button.btn-primary', button => {
-			button.addEventListener('click', event => {
-				const selected = document.querySelectorAll('div.selected');
-				for (const observation of selected) {
-					const lat = observation.querySelector('span.latitude-container');
-					const long = observation.querySelector('span.longitude-container');
-					const modalBody = event.path[1].previousElementSibling;
-					const spans = modalBody.querySelectorAll('span[class="label-text"]');
-					for (const span of spans) {
-						const input = span.nextElementSibling;
-						const type = span.innerHTML;
-						switch (type) {
-							case 'Latitude':
-								lat.innerHTML = input.value;
-								break;
-							
-							case 'Longitude':
-								long.innerHTML = input.value;
-								break;
-						}
-					}
-				}
-			});
 		});
 
 		// colorization
@@ -71,46 +46,40 @@ chrome.storage.sync.get({
 							}
 
 							let parent = element.parentNode;
+							let caption = parent;
 
-							// in the upload workflow, we need to find a stable parent element which won't overwrite our class
+							// in the upload workflow, we need to work up the tree to find a parent element
 							if (location.href.indexOf('upload') > -1) {
 								do {
-									if (parent.tagName.toLowerCase() === 'div' && parent.classList.contains('caption')) {
+									if (parent.classList.contains('cellDropzone')) {
 										break;
 									}
 
 									parent = parent.parentNode;
 								} while (parent.parentNode);
+
+								// we need to find a element with stable classes to use for our "colorized" flag class
+								caption = parent.querySelector('div.caption');
+							}
+
+							if (LOGGING_ENABLED) {
+								console.debug('parent', parent);
+								console.debug('caption', caption, caption.classList.contains('colorized'));
 							}
 							
 							// short-circuit if we've already colorized the CV rows
-							if (parent && parent.classList.contains('colorized')) {
+							if (caption && caption.classList.contains('colorized')) {
 								return;
 							}
-	
-							let lat = null;
-							let long = null;
-							let datetime = null;
 
-							// caption will only be truthy in the upload workflow
-							if (parent) {
-								let container = parent.querySelector('span.latitude-container');
-								if (container) {
-									lat = container.innerHTML || null;
-								}
-							
-								container = parent.querySelector('span.longitude-container');
-								if (container) {
-									long = container.innerHTML || null;
-								}
-							
-								container = parent.querySelector('input[placeholder="Date"]');
-								if (container) {
-									datetime = container.value || null;
-								}
+							// img will be falsy here on the single-observation page
+							const img = parent.querySelector('img.img-thumbnail');
+							const key = img ? img.alt : DEFAULT_KEY_NAME;
+
+							if (LOGGING_ENABLED) {
+								console.debug('key', key);
 							}
-						
-							const key = `${lat}-${long}-${datetime}`;
+
 							const computerVision = computerVisionResults.get(key);
 							if (!computerVision) {
 								return;
@@ -148,8 +117,8 @@ chrome.storage.sync.get({
 							}
 	
 							// flag that we've the colorization so we don't do it repeatedly based on meaningless (to us) churn in the CV list
-							if (parent) {
-								parent.classList.add('colorized');
+							if (caption) {
+								caption.classList.add('colorized');
 							}
 
 							break;

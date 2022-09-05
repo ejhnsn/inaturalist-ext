@@ -2,10 +2,12 @@ function saveOptions() {
     const enableColorVision = document.getElementById('color-vision').checked;
     const colorDisplayMode = document.querySelector('input[name="color-display-mode"]:checked').value;
     const enableColorBlindMode = document.getElementById('color-blind').checked;
+    const enableLogging = document.getElementById('enable-logging').checked;
     chrome.storage.sync.set({
-        enableColorVision: enableColorVision,
-        colorDisplayMode: colorDisplayMode,
-        enableColorBlindMode: enableColorBlindMode
+        enableColorVision,
+        colorDisplayMode,
+        enableColorBlindMode,
+        enableLogging
     }, function() {
         const status = document.getElementById('status');
         status.textContent = 'Options saved.';
@@ -24,6 +26,7 @@ function restoreOptions() {
         document.getElementById('color-vision').checked = items.enableColorVision;
         document.getElementById('display-mode-' + items.colorDisplayMode).checked = true;
         document.getElementById('color-blind').checked = items.enableColorBlindMode;
+        document.getElementById('enable-logging').checked = items.enableLogging;
         colorVisionFeature.dispatchEvent(new Event('change'));
     });
 }

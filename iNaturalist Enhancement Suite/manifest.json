@@ -17,13 +17,13 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.inaturalist.org/*"],
+      "matches": ["https://*.inaturalist.org/observations/*"],
       "js": ["arrive-2.4.1.min.js","content.js"],
 	    "run_at": "document_start"
     }
   ],
   "web_accessible_resources": [{
-    "resources": ["gradient.css","sidebar.css","fetch.js"],
+    "resources": ["gradient.css","sidebar.css","domContext.js"],
     "matches": ["https://*/*"]
   }]
 }
