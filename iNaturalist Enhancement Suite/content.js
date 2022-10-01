@@ -8,6 +8,7 @@ chrome.storage.sync.get({
 
 	const LOGGING_ENABLED = items.enableLogging;
 	const DEFAULT_KEY_NAME = 'default';
+	const FLAG_CLASS = 'expanded';
 	let computerVisionResults = new Map();
 	
 	const script = document.createElement('script');
@@ -46,7 +47,6 @@ chrome.storage.sync.get({
 							}
 
 							let parent = element.parentNode;
-							let caption = parent;
 
 							// in the upload workflow, we need to work up the tree to find a parent element
 							if (location.href.indexOf('upload') > -1) {
@@ -57,19 +57,10 @@ chrome.storage.sync.get({
 
 									parent = parent.parentNode;
 								} while (parent.parentNode);
-
-								// we need to find a element with stable classes to use for our "colorized" flag class
-								caption = parent.querySelector('div.caption');
 							}
 
 							if (LOGGING_ENABLED) {
 								console.debug('parent', parent);
-								console.debug('caption', caption, caption.classList.contains('colorized'));
-							}
-							
-							// short-circuit if we've already colorized the CV rows
-							if (caption && caption.classList.contains('colorized')) {
-								return;
 							}
 
 							// img will be falsy here on the single-observation page
@@ -109,28 +100,26 @@ chrome.storage.sync.get({
 										if (items.colorDisplayMode === 'gradient') {
 											div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
 										} else {
-											updateMenuWidth();
+											const ul = div.parentNode.parentNode;
+											if (!ul.classList.contains(FLAG_CLASS)) {
+												ul.style.width = parseInt(ul.style.width) + 7 + 'px';
+												ul.classList.add(FLAG_CLASS);
+											}
+
 											div.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
 										}
 									});
 								}
-							}
-	
-							// flag that we've the colorization so we don't do it repeatedly based on meaningless (to us) churn in the CV list
-							if (caption) {
-								caption.classList.add('colorized');
 							}
 
 							break;
 						}
 
 						case 'attributes': {
-							// reset the flag so we do the colorization again when the CV menu is reopened
-							if (!mutation.target.classList.contains('open') && mutation.oldValue.indexOf(' open') > -1) {
-								const colorized = document.querySelector('div.colorized');
-								if (colorized) {
-									colorized.classList.remove('colorized');
-								}
+							// reset the flag so we fix the menu width again when the CV menu is reopened
+							const classList = mutation.target.classList;
+							if (!classList.contains('open') && mutation.oldValue.indexOf(' open') > -1 && classList.contains(FLAG_CLASS)) {
+								classList.remove(FLAG_CLASS);
 							}
 
 							break;
@@ -143,15 +132,13 @@ chrome.storage.sync.get({
 			const observer = new MutationObserver(observeCallback);
 			const options = { 
 				childList: true, 
-				subtree: true, 
+				subtree: true,
 				attributeFilter: ['class'], 
 				attributeOldValue: true 
 			};
 
 			observer.observe(ul, options);
 		});
-
-		document.leave('.ac.vision', initializeUpdateMenuWidth);
 	}
 
 	document.documentElement.appendChild(script);
@@ -166,19 +153,3 @@ chrome.storage.sync.get({
 		document.documentElement.appendChild(link);
 	});
 });
-
-let updateMenuWidth;
-
-function updateMenuWidthInner() {
-	var menu = document.getElementsByClassName('ac-menu')[0];
-	menu.style.width = parseInt(menu.style.width) + 7 + 'px';
-}
-
-function initializeUpdateMenuWidth() {
-	updateMenuWidth = function() {
-		updateMenuWidth = function() {};
-		updateMenuWidthInner();
-	}
-}
-
-initializeUpdateMenuWidth();
