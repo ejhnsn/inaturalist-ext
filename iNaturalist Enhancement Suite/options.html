@@ -3,36 +3,50 @@
 		<title>iNaturalist Enhancement Suite options</title>
 	</head>
 	<body>
-		<h2>Color vision</h2>
 		<div>
-			<label>
-				<input type="checkbox" id="color-vision" on checked>
-				Enable color-coded computer vision scores
-			</label>
-		</div>
-		<br>
-		<div id="color-vision-features">
+			<h2>Color vision</h2>
 			<div>
-				How should color-coded computer vision scores should be presented?
-				<br>
 				<label>
-					<input type="radio" name="color-display-mode" id="display-mode-gradient" value="gradient">
-					As a gradient spanning the length of the suggestion
-				</label>
-				<br>
-				<label>
-					<input type="radio" name="color-display-mode" id="display-mode-sidebar" value="sidebar">
-					As a solid sidebar on the left of the suggestion
+					<input type="checkbox" id="color-vision" on checked>
+					Enable color-coded computer vision scores
 				</label>
 			</div>
 			<br>
+			<div id="color-vision-features">
+				<div>
+					How should color-coded computer vision scores should be presented?
+					<br>
+					<label>
+						<input type="radio" name="color-display-mode" id="display-mode-gradient" value="gradient">
+						As a gradient spanning the length of the suggestion
+					</label>
+					<br>
+					<label>
+						<input type="radio" name="color-display-mode" id="display-mode-sidebar" value="sidebar">
+						As a solid sidebar on the left of the suggestion
+					</label>
+				</div>
+				<br>
+				<div>
+					<label>
+						<input type="checkbox" id="color-blind">
+						Enable color-blind mode
+					</label>
+				</div>
+			</div>
+		</div>
+		<div>
+			<h2>"View Yours" count</h2>
 			<div>
 				<label>
-					<input type="checkbox" id="color-blind">
-					Enable color-blind mode
+					<input type="checkbox" id="your-observations-count" on checked>
+					Add your observation count to taxon pages
 				</label>
 			</div>
-			<div style="display: none;">
+		</div>
+		<div style="display: none;">
+			<h2>Debug</h2>
+			<div>
 				<label>
 					<input type="checkbox" id="enable-logging">
 					Enable debug logging

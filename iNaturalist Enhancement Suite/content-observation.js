@@ -2,15 +2,19 @@ chrome.storage.sync.get({
 	enableColorVision: true,
 	enableLogging: false
 }, function(items) {
-	if (!items.enableColorVision) {
-		return;
-	}
-
 	const LOGGING_ENABLED = items.enableLogging;
 	const DEFAULT_KEY_NAME = 'default';
 	const FLAG_CLASS = 'expanded';
+
+	if (!items.enableColorVision) {
+		if (LOGGING_ENABLED) {
+			console.debug('Color vision disabled');
+		}
+
+		return;
+	}
+
 	let computerVisionResults = new Map();
-	
 	const script = document.createElement('script');
 	script.src = chrome.runtime.getURL('domContext.js');
 	script.onload = function() {
