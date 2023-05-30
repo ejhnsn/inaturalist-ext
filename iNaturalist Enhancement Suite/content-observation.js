@@ -1,10 +1,41 @@
 chrome.storage.sync.get({
 	enableColorVision: true,
+	enableCopyGeo: true,
 	enableLogging: false
 }, function(items) {
 	const LOGGING_ENABLED = items.enableLogging;
 	const DEFAULT_KEY_NAME = 'default';
 	const FLAG_CLASS = 'expanded';
+
+	if (items.enableCopyGeo) {
+		document.arrive('.MapDetails > .top_info', async div => {
+			let lat, long;
+			for (var child of div.children) {
+				var attr = child.querySelector('.attr');
+				if (attr) {
+					if (attr.innerHTML.startsWith('Lat')) {
+						lat = child.querySelector('.value').innerHTML;
+					} else if (attr.innerHTML.startsWith('Lon')) {
+						long = child.querySelector('.value').innerHTML;
+					}
+				}
+			}
+
+			if (lat !== undefined && long !== undefined) {
+				const button = document.createElement("button");
+				button.innerHTML = "Copy";
+				button.onclick = async function() {
+					await navigator.clipboard.writeText(`${lat},${long}`);
+				}
+
+				div.appendChild(button);
+			}
+		});
+	} else {
+		if (LOGGING_ENABLED) {
+			console.debug('Copying geocoordinates disabled');
+		}
+	}
 
 	if (!items.enableColorVision) {
 		if (LOGGING_ENABLED) {
