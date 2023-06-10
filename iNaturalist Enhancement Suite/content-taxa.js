@@ -3,11 +3,12 @@ chrome.storage.sync.get({
 	enableLogging: false
 }, async function(items) {
 	const LOGGING_ENABLED = items.enableLogging;
+
+	if (LOGGING_ENABLED) {
+		console.debug(items);
+	}
+
 	if (!items.enableCount) {
-		if (LOGGING_ENABLED) {
-			console.debug('Count disabled');
-		}
-		
 		return;
 	}
 

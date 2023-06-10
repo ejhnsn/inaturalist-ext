@@ -65,7 +65,6 @@ window.fetch = async (url, options) => {
 	try {
 		if (url.startsWith('https://api.inaturalist.org/v1/computervision')) {
 			const data = await response.clone().json();
-
 			if (data) {
 				let filename = null;
 				if (options) {
@@ -88,6 +87,22 @@ window.fetch = async (url, options) => {
 				document.dispatchEvent(
 					new CustomEvent('computerVisionResponse', payload)
 				);
+			}
+		} else {
+			const observationMatch = url.match(/^https:\/\/api.inaturalist.org\/v1\/observations\/\d+/i);
+			if (observationMatch) {
+				const data = await response.clone().json();
+				if (data && data.results && data.results.length && data.results[0]) {
+					const payload = { 
+						detail: {
+							location: data.results[0].location
+						}
+					};
+
+					document.dispatchEvent(
+						new CustomEvent('observationFetch', payload)
+					);
+				}
 			}
 		}
 	} catch (err) {
