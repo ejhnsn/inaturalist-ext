@@ -7,6 +7,10 @@ chrome.storage.sync.get({
 	const DEFAULT_KEY_NAME = 'default';
 	const FLAG_CLASS = 'expanded';
 
+	if (LOGGING_ENABLED) {
+		console.debug(items);
+	}
+
 	if (items.enableCopyGeo) {
 		document.arrive('.MapDetails > .top_info', async div => {
 			let lat, long;
@@ -22,8 +26,8 @@ chrome.storage.sync.get({
 			}
 
 			if (lat !== undefined && long !== undefined) {
-				const button = document.createElement("button");
-				button.innerHTML = "Copy";
+				const button = document.createElement('button');
+				button.innerHTML = 'Copy';
 				button.onclick = async function() {
 					await navigator.clipboard.writeText(`${lat},${long}`);
 				}
@@ -31,39 +35,61 @@ chrome.storage.sync.get({
 				div.appendChild(button);
 			}
 		});
-	} else {
-		if (LOGGING_ENABLED) {
-			console.debug('Copying geocoordinates disabled');
-		}
 	}
 
-	if (!items.enableColorVision) {
-		if (LOGGING_ENABLED) {
-			console.debug('Color vision disabled');
-		}
-
-		return;
-	}
-
+	let location;
 	let computerVisionResults = new Map();
 	const script = document.createElement('script');
 	script.src = chrome.runtime.getURL('domContext.js');
 	script.onload = function() {
+		document.addEventListener('observationFetch', event => {
+			if (LOGGING_ENABLED) {
+				console.trace('observationFetch handler', event.detail);
+			}
+			
+			if (items.enableCopyGeo) {
+				const detail = event.detail;
+				if (detail) {
+					location = detail.location;
+					if (location) {
+						const ul = document.querySelector(".map-and-details .details ul:not([role])");
+						if (ul) {
+							const buttonClass = 'copy-geo';
+							if (!ul.querySelector('.' + buttonClass)) {
+								const button = document.createElement('button');
+								button.innerHTML = 'Copy geocoordinates';
+								button.className = buttonClass;
+								button.onclick = async function() {
+									await navigator.clipboard.writeText(location);
+								}
+
+								const li = document.createElement('li');
+								li.appendChild(button);
+								ul.appendChild(li);
+							}
+						}
+					}
+				}	 
+			}
+		});
+
 		// cache the CV response for a photo
 		document.addEventListener('computerVisionResponse', event => {
 			if (LOGGING_ENABLED) {
 				console.trace('computerVisionResponse handler', event.detail);
 			}
 
-			const detail = event.detail;
-			if (detail && detail.data) {
-				const key = detail.filename || DEFAULT_KEY_NAME;
-				if (LOGGING_ENABLED) {
- 					console.debug('key', key);
-				}
+			if (items.enableColorVision) {
+				const detail = event.detail;
+				if (detail && detail.data) {
+					const key = detail.filename || DEFAULT_KEY_NAME;
+					if (LOGGING_ENABLED) {
+						console.debug('key', key);
+					}
 
-				computerVisionResults.set(key, detail.data);
-			}	 
+					computerVisionResults.set(key, detail.data);
+				}	 
+			}
 		});
 
 		// colorization
@@ -84,7 +110,7 @@ chrome.storage.sync.get({
 							let parent = element.parentNode;
 
 							// in the upload workflow, we need to work up the tree to find a parent element
-							if (location.href.indexOf('upload') > -1) {
+							if (window.location.href.indexOf('upload') > -1) {
 								do {
 									if (parent.classList.contains('cellDropzone')) {
 										break;
