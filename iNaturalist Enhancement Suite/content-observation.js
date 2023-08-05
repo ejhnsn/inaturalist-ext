@@ -1,6 +1,7 @@
 chrome.storage.sync.get({
 	enableColorVision: true,
 	enableCopyGeo: true,
+	enableIdentifierStats: true,
 	enableLogging: false
 }, function(items) {
 	const LOGGING_ENABLED = items.enableLogging;
@@ -10,6 +11,39 @@ chrome.storage.sync.get({
 	if (LOGGING_ENABLED) {
 		console.debug(items);
 	}
+
+	if (items.enableIdentifierStats) {
+		document.arrive('.by-someone-else', async div => {
+			const userAnchor = div.querySelector('a.user')
+			const taxonAnchor = div.querySelector('.taxon > a')
+			if (userAnchor && taxonAnchor) {
+				const user = userAnchor.innerHTML;
+				const taxonParts = taxonAnchor.href.split('/')
+				const taxonId = taxonParts[taxonParts.length - 1];
+				const url = `https://api.inaturalist.org/v1/identifications/categories?user_login=${user}&taxon_id=${taxonId}`;
+				const response = await fetch(url);
+				const data = await response.json();
+				if (data && data.results && data.results.length) {
+					const leading = data.results.find(c => c.category === 'leading');
+					const improving = data.results.find(c => c.category === 'improving');
+					const supporting = data.results.find(c => c.category === 'supporting');
+					const maverick = data.results.find(c => c.category === 'maverick');
+					const leadingCount = leading ? leading.count : 0;
+					const improvingCount = improving ? improving.count : 0;
+					const supportingCount = supporting ? supporting.count : 0;
+					const maverickCount = maverick ? maverick.count : 0;
+					const span = div.querySelector('span.title_text');
+					if (span) {
+						const suggestedText = ' suggested an ID';
+						const spanParts = span.innerHTML.split(suggestedText);
+						const title = `Leading: ${leadingCount}&#010;Improving: ${improvingCount}&#010;Supporting: ${supportingCount}&#010;Maverick: ${maverickCount}`;
+						span.innerHTML = `${spanParts[0]} <span title="${title}">(${leadingCount + improvingCount})</span> ${suggestedText}`;
+					}
+				}
+			}
+		})
+	}
+
 
 	if (items.enableCopyGeo) {
 		document.arrive('.MapDetails > .top_info', async div => {

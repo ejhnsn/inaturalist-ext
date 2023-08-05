@@ -4,6 +4,7 @@ function saveOptions() {
     const enableColorBlindMode = document.getElementById('color-blind').checked;
     const enableCount = document.getElementById('your-observations-count').checked;
     const enableCopyGeo = document.getElementById('copy-geocoordinates').checked;
+    const enableIdentifierStats = document.getElementById('identifier-stats').checked;
     const enableLogging = document.getElementById('enable-logging').checked;
     chrome.storage.sync.set({
         enableColorVision,
@@ -11,6 +12,7 @@ function saveOptions() {
         enableColorBlindMode,
         enableCount,
         enableCopyGeo,
+        enableIdentifierStats,
         enableLogging
     }, function() {
         const status = document.getElementById('status');
@@ -27,7 +29,8 @@ function restoreOptions() {
         colorDisplayMode: 'sidebar',
         enableColorBlindMode: false,
         enableCount: true,
-        enableCopyGeo: true
+        enableCopyGeo: true,
+        enableIdentifierStats: true
     }, function(items) {
         document.getElementById('color-vision').checked = items.enableColorVision;
         document.getElementById('display-mode-' + items.colorDisplayMode).checked = true;
@@ -35,6 +38,8 @@ function restoreOptions() {
         document.getElementById('enable-logging').checked = items.enableLogging;
         document.getElementById('your-observations-count').checked = items.enableCount;
         document.getElementById('copy-geocoordinates').checked = items.enableCopyGeo;
+        document.getElementById('copy-geocoordinates').checked = items.enableCopyGeo;
+        document.getElementById('identifier-stats').checked = items.enableIdentifierStats;
         colorVisionFeature.dispatchEvent(new Event('change'));
     });
 }
