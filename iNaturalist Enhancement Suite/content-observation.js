@@ -34,10 +34,9 @@ chrome.storage.sync.get({
 					const maverickCount = maverick ? maverick.count : 0;
 					const span = div.querySelector('span.title_text');
 					if (span) {
-						const suggestedText = ' suggested an ID';
-						const spanParts = span.innerHTML.split(suggestedText);
 						const title = `Leading: ${leadingCount}&#010;Improving: ${improvingCount}&#010;Supporting: ${supportingCount}&#010;Maverick: ${maverickCount}`;
-						span.innerHTML = `${spanParts[0]} <span title="${title}">(${leadingCount + improvingCount})</span> ${suggestedText}`;
+						const countMarkup = `<span title="${title}">(${leadingCount + improvingCount})</span>`;
+						span.innerHTML = span.innerHTML.replace('</a>', `</a> ${countMarkup}`);
 					}
 				}
 			}
