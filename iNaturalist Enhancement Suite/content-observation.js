@@ -13,7 +13,7 @@ chrome.storage.sync.get({
 	}
 
 	if (items.enableIdentifierStats) {
-		document.arrive('.by-someone-else', async div => {
+		document.arrive('.ActivityItem.identification', async div => {
 			const userAnchor = div.querySelector('a.user')
 			const taxonAnchor = div.querySelector('.taxon > a')
 			if (userAnchor && taxonAnchor) {
