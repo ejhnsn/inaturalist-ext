@@ -1,7 +1,7 @@
 {
   "name": "iNaturalist Enhancement Suite",
   "description" : "Adds functionality to iNaturalist",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "manifest_version": 3,
   "icons": { 
     "16": "icon16.png",
@@ -49,6 +49,23 @@
         "https://*.www.naturalista.uy/taxa/*"
       ],
       "js": ["arrive-2.4.1.min.js","content-taxa.js"],
+	    "run_at": "document_start"
+    }, {
+      "matches": [
+        "https://*.inaturalist.org/projects/*", 
+        "https://*.inaturalist.nz/projects/*",
+        "https://*.naturalista.mx/projects/*",
+        "https://*.inaturalist.ca/projects/*",
+        "https://*.biodiversity4all.org/projects/*",
+        "https://inaturalist.ala.org.au/projects/*", 
+        "https://*.argentinat.org/projects/*",
+        "https://*.inaturalist.mma.gob.cl/projects/*",
+        "https://inaturalist.laji.fi/projects/*",
+        "https://*.inaturalist.se/projects/*",
+        "https://*.inaturalist.lu/projects/*", 
+        "https://*.www.naturalista.uy/projects/*"
+      ],
+      "js": ["arrive-2.4.1.min.js","content-projects.js"],
 	    "run_at": "document_start"
     }
   ],
