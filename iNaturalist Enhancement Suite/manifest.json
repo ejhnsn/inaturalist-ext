@@ -1,7 +1,7 @@
 {
   "name": "iNaturalist Enhancement Suite",
   "description" : "Adds functionality to iNaturalist",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "manifest_version": 3,
   "icons": { 
     "16": "icon16.png",
@@ -32,6 +32,23 @@
         "https://*.www.naturalista.uy/observations/*"
       ],
       "js": ["arrive-2.4.1.min.js","content-observation.js"],
+	    "run_at": "document_start"
+    }, {
+      "matches": [
+        "https://*.inaturalist.org/observations/upload", 
+        "https://*.inaturalist.nz/observations/upload",
+        "https://*.naturalista.mx/observations/upload",
+        "https://*.inaturalist.ca/observations/upload",
+        "https://*.biodiversity4all.org/observations/upload",
+        "https://inaturalist.ala.org.au/observations/upload", 
+        "https://*.argentinat.org/observations/upload",
+        "https://*.inaturalist.mma.gob.cl/observations/upload",
+        "https://inaturalist.laji.fi/observations/upload",
+        "https://*.inaturalist.se/observations/upload",
+        "https://*.inaturalist.lu/observations/upload", 
+        "https://*.www.naturalista.uy/observations/*upload"
+      ],
+      "js": ["arrive-2.4.1.min.js","content-upload.js"],
 	    "run_at": "document_start"
     }, {
       "matches": [
