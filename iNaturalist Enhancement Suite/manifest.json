@@ -1,7 +1,7 @@
 {
   "name": "iNaturalist Enhancement Suite",
   "description" : "Adds functionality to iNaturalist",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "manifest_version": 3,
   "icons": { 
     "16": "icon16.png",
@@ -18,17 +18,35 @@
   "content_scripts": [
     {
       "matches": [
-        "https://*.inaturalist.org/observations/*", 
+        "https://*.inaturalist.org/observations/*",
         "https://*.inaturalist.nz/observations/*",
         "https://*.naturalista.mx/observations/*",
         "https://*.inaturalist.ca/observations/*",
         "https://*.biodiversity4all.org/observations/*",
-        "https://inaturalist.ala.org.au/observations/*", 
+        "https://inaturalist.ala.org.au/observations/*",
         "https://*.argentinat.org/observations/*",
         "https://*.inaturalist.mma.gob.cl/observations/*",
         "https://inaturalist.laji.fi/observations/*",
         "https://*.inaturalist.se/observations/*",
-        "https://*.inaturalist.lu/observations/*", 
+        "https://*.inaturalist.lu/observations/*",
+        "https://*.www.naturalista.uy/observations/*"
+      ],
+      "js": ["domContext.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }, {
+      "matches": [
+        "https://*.inaturalist.org/observations/*",
+        "https://*.inaturalist.nz/observations/*",
+        "https://*.naturalista.mx/observations/*",
+        "https://*.inaturalist.ca/observations/*",
+        "https://*.biodiversity4all.org/observations/*",
+        "https://inaturalist.ala.org.au/observations/*",
+        "https://*.argentinat.org/observations/*",
+        "https://*.inaturalist.mma.gob.cl/observations/*",
+        "https://inaturalist.laji.fi/observations/*",
+        "https://*.inaturalist.se/observations/*",
+        "https://*.inaturalist.lu/observations/*",
         "https://*.www.naturalista.uy/observations/*"
       ],
       "js": ["arrive-2.4.1.min.js","content-observation.js"],
@@ -70,7 +88,7 @@
     }
   ],
   "web_accessible_resources": [{
-    "resources": ["gradient.css","sidebar.css","domContext.js"],
+    "resources": ["gradient.css","sidebar.css"],
     "matches": ["https://*/*"]
   }]
 }
