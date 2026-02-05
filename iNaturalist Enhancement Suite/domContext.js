@@ -59,6 +59,70 @@ HTMLCanvasElement.prototype.toBlob = function() {
 	HTMLCanvasElement.prototype.toBlobOriginal.apply(this, arguments); 
 };
 
+// Get the iNaturalist API token from the page
+function getApiToken() {
+	const metaToken = document.querySelector('meta[name="inaturalist-api-token"]');
+	if (metaToken && metaToken.content) {
+		console.log('[iNat Enhancement] Found API token in meta tag');
+		return metaToken.content;
+	}
+
+	console.log('[iNat Enhancement] No API token found - user may not be logged in');
+	return null;
+}
+
+// Listen for score_image requests from content script
+document.addEventListener('scoreImageRequest', async (event) => {
+	const { imageDataUrl, metadata, requestId } = event.detail;
+
+	try {
+		const apiToken = getApiToken();
+		if (!apiToken) {
+			throw new Error('Not logged in - please log in to iNaturalist to use CV suggestions');
+		}
+
+		// Convert data URL to blob
+		const response = await fetch(imageDataUrl);
+		const blob = await response.blob();
+
+		const formData = new FormData();
+		formData.append('image', blob, 'cropped.jpg');
+		formData.append('include_representative_photos', 'true');
+
+		if (metadata.lat && metadata.lng) {
+			formData.append('lat', metadata.lat);
+			formData.append('lng', metadata.lng);
+		}
+		if (metadata.observed_on) {
+			formData.append('observed_on', metadata.observed_on);
+		}
+
+		const apiResponse = await fetch('https://api.inaturalist.org/v1/computervision/score_image', {
+			method: 'POST',
+			headers: {
+				'Accept': 'application/json',
+				'Authorization': apiToken,
+				'X-Via': 'iNaturalist-Enhancement-Suite'
+			},
+			body: formData
+		});
+
+		if (!apiResponse.ok) {
+			throw new Error(`API error: ${apiResponse.status}`);
+		}
+
+		const data = await apiResponse.json();
+
+		document.dispatchEvent(new CustomEvent('scoreImageResponse', {
+			detail: { requestId, success: true, data }
+		}));
+	} catch (error) {
+		document.dispatchEvent(new CustomEvent('scoreImageResponse', {
+			detail: { requestId, success: false, error: error.message }
+		}));
+	}
+});
+
 const oldFetch = window.fetch;
 window.fetch = async (url, options) => {
     const response = await oldFetch(url, options);

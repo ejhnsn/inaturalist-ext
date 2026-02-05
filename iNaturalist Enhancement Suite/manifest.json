@@ -1,7 +1,7 @@
 {
   "name": "iNaturalist Enhancement Suite",
   "description" : "Adds functionality to iNaturalist",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "manifest_version": 3,
   "icons": { 
     "16": "icon16.png",
@@ -9,8 +9,15 @@
     "128": "icon128.png" 
   },
   "permissions": [
-    "storage"
+    "storage",
+    "cookies"
   ],
+  "host_permissions": [
+    "https://*.inaturalist.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "options_ui": {
     "page": "options.html",
     "open_in_tab": false
@@ -49,7 +56,7 @@
         "https://*.inaturalist.lu/observations/*",
         "https://*.www.naturalista.uy/observations/*"
       ],
-      "js": ["arrive-2.4.1.min.js","content-observation.js"],
+      "js": ["arrive-2.4.1.min.js","cropper.min.js","content-observation.js","content-crop-poc.js"],
 	    "run_at": "document_start"
     }, {
       "matches": [
@@ -88,7 +95,7 @@
     }
   ],
   "web_accessible_resources": [{
-    "resources": ["gradient.css","sidebar.css"],
+    "resources": ["gradient.css","sidebar.css","cropper.min.js","cropper.min.css"],
     "matches": ["https://*/*"]
   }]
 }
