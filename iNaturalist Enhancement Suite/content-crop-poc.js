@@ -285,6 +285,12 @@
 			.inat-crop-results-list li:last-child {
 				border-bottom: none;
 			}
+			.inat-crop-results-list li.selectable {
+				cursor: pointer;
+			}
+			.inat-crop-results-list li.selectable:hover {
+				background-color: #f0f7e6;
+			}
 			.inat-crop-results-list .result-photo {
 				width: 40px;
 				height: 40px;
@@ -415,6 +421,84 @@
 		}
 	}
 
+	// Apply the selected identification to the suggestion input
+	function applyIdentification(scientificName) {
+		console.log('[iNat Enhancement] Attempting to apply identification:', scientificName);
+
+		// Find and click the "Suggest an Identification" tab
+		const tabSelectors = [
+			'a[href="#activity_suggest_tab"]',
+			'[role="tab"][aria-controls*="suggest"]',
+			'.ActivityCreatePanel .nav-tabs li:nth-child(2) a',
+			'.nav-tabs a'
+		];
+
+		let idTab = null;
+		for (const selector of tabSelectors) {
+			try {
+				const tabs = document.querySelectorAll(selector);
+				for (const tab of tabs) {
+					if (tab.textContent.includes('Suggest')) {
+						idTab = tab;
+						break;
+					}
+				}
+				if (idTab) break;
+			} catch (e) {
+				console.warn('[iNat Enhancement] Invalid selector:', selector);
+			}
+		}
+
+		console.log('[iNat Enhancement] Found tab:', idTab);
+
+		if (idTab) {
+			idTab.click();
+			console.log('[iNat Enhancement] Clicked tab');
+		}
+
+		// Wait a bit for tab content to render, then find input
+		setTimeout(() => {
+			// Find the identification input
+			const inputSelectors = [
+				'.IdentificationForm input[type="text"]',
+				'.TaxonAutocomplete input[type="text"]',
+				'input[placeholder*="Species"]',
+				'input[placeholder*="species"]',
+				'.ActiveTab input[type="text"]',
+				'#activity_suggest_tab input[type="text"]',
+				'.tab-pane.active input[type="text"]'
+			];
+
+			let input = null;
+			for (const selector of inputSelectors) {
+				input = document.querySelector(selector);
+				console.log('[iNat Enhancement] Trying selector:', selector, '-> found:', input);
+				if (input) break;
+			}
+
+			if (!input) {
+				console.warn('[iNat Enhancement] Could not find identification input');
+				alert('Could not find identification input. Please manually enter: ' + scientificName);
+				return;
+			}
+
+			// Scroll to and focus the input
+			input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+			// Set the value and trigger input events
+			input.focus();
+			input.value = scientificName;
+
+			// Trigger events to notify React/jQuery of the change
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			input.dispatchEvent(new Event('change', { bubbles: true }));
+			input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
+			input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+
+			console.log('[iNat Enhancement] Applied identification:', scientificName);
+		}, 200);
+	}
+
 	function handleCrop() {
 		if (!cropper) return;
 
@@ -474,23 +558,56 @@
 
 		listEl.innerHTML = results.map(result => {
 			const taxon = result.taxon;
-			const score = (result.combined_score * 100).toFixed(1);
+			const score = result.combined_score;
 			const photoUrl = taxon.default_photo?.square_url || '';
 			const scientificName = taxon.name || 'Unknown';
 			const commonName = taxon.preferred_common_name || '';
-			const taxonUrl = `https://www.inaturalist.org/taxa/${taxon.id}`;
 
 			return `
-				<li>
+				<li data-score="${score}" data-scientific-name="${scientificName}" class="selectable">
 					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : ''}
-					<a href="${taxonUrl}" target="_blank" class="result-info">
+					<div class="result-info">
 						<div class="result-name"><em>${scientificName}</em></div>
 						${commonName ? `<div class="result-common">${commonName}</div>` : ''}
-					</a>
-					<span class="result-score">${score}%</span>
+					</div>
+					<span class="result-score">${score.toFixed(1)}%</span>
 				</li>
 			`;
 		}).join('');
+
+		// Add click handlers to select a result
+		listEl.querySelectorAll('li.selectable').forEach(li => {
+			li.addEventListener('click', () => {
+				const scientificName = li.dataset.scientificName;
+				closeCropModal();
+				// Wait for modal to close before interacting with page elements
+				setTimeout(() => applyIdentification(scientificName), 100);
+			});
+		});
+
+		// Apply color vision coloring based on user settings
+		chrome.storage.sync.get({
+			enableColorVision: true,
+			colorDisplayMode: 'sidebar',
+			enableColorBlindMode: false
+		}, function(items) {
+			if (!items.enableColorVision) return;
+
+			listEl.querySelectorAll('li[data-score]').forEach(li => {
+				const score = parseFloat(li.dataset.score);
+				let hue = score * 1.2;
+
+				if (items.enableColorBlindMode) {
+					hue = hue * -1 + 240;
+				}
+
+				if (items.colorDisplayMode === 'gradient') {
+					li.style.background = `linear-gradient(to right, hsl(${hue},50%,50%), white 90%)`;
+				} else {
+					li.style.borderLeft = `7px solid hsl(${hue},50%,50%)`;
+				}
+			});
+		});
 
 		// Also show common ancestor if available
 		if (data.common_ancestor) {
