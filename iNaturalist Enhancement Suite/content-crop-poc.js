@@ -63,32 +63,35 @@
 		modal.id = 'inat-crop-modal';
 		modal.innerHTML = `
 			<div class="inat-crop-overlay"></div>
-			<div class="inat-crop-container">
-				<div class="inat-crop-header">
-					<h3>Crop Image for Computer Vision</h3>
-					<button class="inat-crop-close">&times;</button>
-				</div>
-				<div class="inat-crop-body">
-					<div class="inat-crop-loading">
-						<div class="inat-crop-spinner"></div>
-						<span>Loading image...</span>
+			<div class="inat-crop-wrapper">
+				<div class="inat-crop-container">
+					<div class="inat-crop-header">
+						<h3>Crop Image for Computer Vision</h3>
+						<button class="inat-crop-close">&times;</button>
 					</div>
-					<img id="inat-crop-image" src="" alt="Crop preview">
-				</div>
-				<div class="inat-crop-footer">
-					<div class="inat-crop-instructions">
-						Drag to reposition, scroll to zoom, drag corners to resize crop area
+					<div class="inat-crop-body">
+						<div class="inat-crop-loading">
+							<div class="inat-crop-spinner"></div>
+							<span>Loading image...</span>
+						</div>
+						<img id="inat-crop-image" src="" alt="Crop preview">
 					</div>
-					<div class="inat-crop-buttons">
-						<button class="inat-crop-btn inat-crop-cancel">Cancel</button>
-						<button class="inat-crop-btn inat-crop-submit">Get CV Suggestions</button>
+					<div class="inat-crop-footer">
+						<div class="inat-crop-instructions">
+							Drag to reposition, scroll to zoom, drag corners to resize crop area
+						</div>
+						<div class="inat-crop-buttons">
+							<button class="inat-crop-btn inat-crop-cancel">Cancel</button>
+							<button class="inat-crop-btn inat-crop-submit">Get CV Suggestions</button>
+						</div>
 					</div>
 				</div>
-				<div class="inat-crop-results" style="display:none;">
+				<div class="inat-crop-results">
 					<div class="inat-crop-results-header">
-						<h4>Computer Vision Suggestions</h4>
-						<span class="inat-crop-results-loading">Loading...</span>
+						<span>CV Suggestions</span>
+						<button class="inat-crop-results-close">&times;</button>
 					</div>
+					<div class="inat-crop-results-loading">Loading suggestions...</div>
 					<ul class="inat-crop-results-list"></ul>
 				</div>
 			</div>
@@ -110,6 +113,15 @@
 			#inat-crop-modal.active {
 				display: block;
 			}
+			.inat-crop-wrapper {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				display: flex;
+				align-items: flex-start;
+				gap: 12px;
+			}
 			.inat-crop-overlay {
 				position: absolute;
 				top: 0;
@@ -119,17 +131,14 @@
 				background: rgba(0, 0, 0, 0.8);
 			}
 			.inat-crop-container {
-				position: absolute;
-				top: 50%;
-				left: 50%;
-				transform: translate(-50%, -50%);
 				background: #fff;
 				border-radius: 8px;
 				max-width: min(800px, 90vw);
-				max-height: 90vh;
+				max-height: 85vh;
 				overflow: hidden;
 				display: flex;
 				flex-direction: column;
+				flex-shrink: 0;
 			}
 			.inat-crop-header {
 				display: flex;
@@ -248,91 +257,138 @@
 				border: 1px solid #ccc;
 			}
 			.inat-crop-results {
-				border-top: 1px solid #e0e0e0;
-				max-height: 200px;
+				background: #fff;
+				border-radius: 8px;
+				width: 500px;
+				max-height: 85vh;
 				overflow-y: auto;
+				box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+				flex-shrink: 0;
+				visibility: hidden;
+			}
+			.inat-crop-results.visible {
+				visibility: visible;
 			}
 			.inat-crop-results-header {
 				display: flex;
 				justify-content: space-between;
 				align-items: center;
-				padding: 8px 16px;
+				padding: 12px 16px;
 				background: #f5f5f5;
+				border-bottom: 1px solid #e0e0e0;
+				font-weight: 600;
+				font-size: 14px;
 				position: sticky;
 				top: 0;
+				z-index: 1;
 			}
-			.inat-crop-results-header h4 {
-				margin: 0;
-				font-size: 14px;
-				font-weight: 600;
+			.inat-crop-results-close {
+				background: none;
+				border: none;
+				font-size: 20px;
+				cursor: pointer;
+				color: #666;
+				padding: 0;
+				line-height: 1;
+			}
+			.inat-crop-results-close:hover {
+				color: #333;
 			}
 			.inat-crop-results-loading {
 				font-size: 12px;
 				color: #666;
+				padding: 12px 16px;
 			}
 			.inat-crop-results-list {
 				list-style: none;
 				margin: 0;
 				padding: 0;
 			}
-			.inat-crop-results-list li {
+			.inat-crop-results-list .section-header {
+				padding: 8px 16px;
+				background: #f0f0f0;
+				font-size: 13px;
+				color: #333;
+				border-bottom: 1px solid #e0e0e0;
+			}
+			.inat-crop-results-list li.result-item {
 				display: flex;
 				align-items: center;
-				padding: 8px 16px;
+				padding: 8px 12px;
 				border-bottom: 1px solid #eee;
-				gap: 12px;
-			}
-			.inat-crop-results-list li:last-child {
-				border-bottom: none;
-			}
-			.inat-crop-results-list li.selectable {
+				gap: 8px;
 				cursor: pointer;
+				min-height: 64px;
+				box-sizing: border-box;
 			}
-			.inat-crop-results-list li.selectable:hover {
-				background-color: #f0f7e6;
+			.inat-crop-results-list li.result-item:hover {
+				background-color: #f5f5f5;
+			}
+			.inat-crop-results-list .result-border {
+				width: 6px;
+				align-self: stretch;
+				flex-shrink: 0;
+				border-radius: 3px;
 			}
 			.inat-crop-results-list .result-photo {
-				width: 40px;
-				height: 40px;
+				width: 48px;
+				height: 48px;
 				border-radius: 4px;
 				object-fit: cover;
 				flex-shrink: 0;
+				background: #e0e0e0;
 			}
 			.inat-crop-results-list .result-info {
 				flex: 1;
 				min-width: 0;
+				overflow: hidden;
 			}
 			.inat-crop-results-list .result-name {
-				font-weight: 500;
+				font-weight: 600;
 				font-size: 14px;
 				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
 			}
-			.inat-crop-results-list .result-name em {
-				font-style: italic;
-			}
-			.inat-crop-results-list .result-common {
+			.inat-crop-results-list .result-rank {
 				font-size: 12px;
 				color: #666;
 				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
 			}
+			.inat-crop-results-list .result-rank em {
+				font-style: italic;
+			}
+			.inat-crop-results-list .result-tags {
+				font-size: 11px;
+				color: #74ac00;
+				margin-top: 2px;
+			}
+			/* Gradient mode: black text for readability */
+			.inat-crop-results-list.gradient-mode .result-name,
+			.inat-crop-results-list.gradient-mode .result-rank,
+			.inat-crop-results-list.gradient-mode .result-tags {
+				color: #000;
+			}
 			.inat-crop-results-list .result-score {
-				font-size: 12px;
+				font-size: 11px;
 				font-weight: 600;
 				padding: 2px 8px;
 				border-radius: 10px;
-				background: #e8f5e9;
-				color: #2e7d32;
+				background: #74ac00;
+				color: white;
 				flex-shrink: 0;
+				margin-right: 8px;
 			}
-			.inat-crop-results-list a {
-				color: inherit;
+			.inat-crop-results-list .view-link {
+				color: #333;
+				font-size: 13px;
 				text-decoration: none;
+				flex-shrink: 0;
+				padding: 4px 8px;
 			}
-			.inat-crop-results-list a:hover .result-name {
+			.inat-crop-results-list .view-link:hover {
 				text-decoration: underline;
 			}
 		`;
@@ -343,6 +399,7 @@
 
 	let modal = null;
 	let cropper = null;
+	let cvResultsCache = null; // Cache for CV results, invalidated on crop change
 
 	function openCropModal(imageUrl) {
 		if (!modal) {
@@ -353,13 +410,30 @@
 			modal.querySelector('.inat-crop-cancel').addEventListener('click', closeCropModal);
 			modal.querySelector('.inat-crop-overlay').addEventListener('click', closeCropModal);
 			modal.querySelector('.inat-crop-submit').addEventListener('click', handleCrop);
+			modal.querySelector('.inat-crop-results-close').addEventListener('click', () => {
+				modal.querySelector('.inat-crop-results').classList.remove('visible');
+			});
+
+			// Handle Escape key - close results first, then modal
+			document.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape' && modal.classList.contains('active')) {
+					const resultsEl = modal.querySelector('.inat-crop-results');
+					if (resultsEl.classList.contains('visible')) {
+						resultsEl.classList.remove('visible');
+					} else {
+						closeCropModal();
+					}
+				}
+			});
 		}
 
 		const cropImage = modal.querySelector('#inat-crop-image');
 		const loadingEl = modal.querySelector('.inat-crop-loading');
 
 		// Reset results area
-		modal.querySelector('.inat-crop-results').style.display = 'none';
+		const resultsEl = modal.querySelector('.inat-crop-results');
+		resultsEl.classList.remove('visible');
+		resultsEl.querySelector('.inat-crop-results-list').innerHTML = '';
 
 		// Show loading state
 		loadingEl.classList.add('active');
@@ -394,6 +468,11 @@
 				// Prevent Cropper from re-fetching (we're using a data URL)
 				checkCrossOrigin: false,
 				checkOrientation: false,
+				// Invalidate CV cache when crop area changes
+				cropend: function() {
+					cvResultsCache = null;
+					console.log('[iNat Enhancement] Crop changed, cache invalidated');
+				}
 			});
 		}
 
@@ -415,6 +494,8 @@
 		if (modal) {
 			modal.classList.remove('active');
 		}
+		// Clear the CV results cache
+		cvResultsCache = null;
 		if (cropper) {
 			cropper.destroy();
 			cropper = null;
@@ -481,9 +562,20 @@
 		const resultsLoading = modal.querySelector('.inat-crop-results-loading');
 		const resultsList = modal.querySelector('.inat-crop-results-list');
 
-		// Show results area with loading state
-		resultsArea.style.display = 'block';
-		resultsLoading.textContent = 'Loading...';
+		// Show results area
+		resultsArea.classList.add('visible');
+
+		// Check cache first
+		if (cvResultsCache) {
+			console.log('[iNat Enhancement] Using cached CV results');
+			resultsLoading.style.display = 'none';
+			displayCVResults(cvResultsCache, resultsList);
+			return;
+		}
+
+		// Show loading state
+		resultsLoading.textContent = 'Loading suggestions...';
+		resultsLoading.style.display = 'block';
 		resultsList.innerHTML = '';
 
 		// Get observation metadata
@@ -499,7 +591,10 @@
 				const data = await callScoreImageAPI(imageDataUrl, metadata);
 				console.log('CV results:', data);
 
-				resultsLoading.textContent = '';
+				// Cache the results
+				cvResultsCache = data;
+
+				resultsLoading.style.display = 'none';
 				displayCVResults(data, resultsList);
 			} catch (error) {
 				console.error('score_image API error:', error);
@@ -508,58 +603,132 @@
 		})();
 	}
 
-	// Display CV results in the list
+	// Display CV results in the list (styled like iNaturalist's autocomplete)
 	function displayCVResults(data, listEl) {
 		if (!data.results || data.results.length === 0) {
-			listEl.innerHTML = '<li>No suggestions found</li>';
+			listEl.innerHTML = '<li class="section-header">No suggestions found</li>';
 			return;
 		}
+
+		// Build the HTML
+		let html = '';
+
+		// Show common ancestor as selectable item if available
+		if (data.common_ancestor) {
+			const ancestor = data.common_ancestor.taxon;
+			const ancestorScore = data.common_ancestor.score;
+			const rankName = capitalizeRank(ancestor.rank);
+			const photoUrl = ancestor.default_photo?.square_url || '';
+			const commonName = ancestor.preferred_common_name;
+			const scientificName = ancestor.name;
+
+			html += `<li class="section-header">We're pretty sure this is in the ${rankName.toLowerCase()}:</li>`;
+			html += `
+				<li class="result-item" data-taxon-id="${ancestor.id}" data-is-ancestor="true">
+					<div class="result-border" style="background: #74ac00;"></div>
+					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : '<div class="result-photo"></div>'}
+					<div class="result-info">
+						<div class="result-name">${commonName || scientificName}</div>
+						<div class="result-rank">${rankName} <em>${scientificName}</em></div>
+					</div>
+					${ancestorScore ? `<span class="result-score">${ancestorScore.toFixed(1)}%</span>` : ''}
+					<a class="view-link" href="https://www.inaturalist.org/taxa/${ancestor.id}" target="_blank" onclick="event.stopPropagation();">View</a>
+				</li>
+			`;
+		}
+
+		// Section header for top suggestions
+		html += '<li class="section-header">Here are our top suggestions:</li>';
 
 		// Show top 10 results
 		const results = data.results.slice(0, 10);
 
-		listEl.innerHTML = results.map(result => {
+		html += results.map(result => {
 			const taxon = result.taxon;
 			const score = result.combined_score;
 			const photoUrl = taxon.default_photo?.square_url || '';
-			const scientificName = taxon.name || 'Unknown';
-			const commonName = taxon.preferred_common_name || '';
+			const commonName = taxon.preferred_common_name;
+			const scientificName = taxon.name;
+			const rankName = capitalizeRank(taxon.rank);
+
+			// Build vision/geo tags
+			const tags = [];
+			if (result.vision_score) tags.push('Visually Similar');
+			if (result.frequency_score) tags.push('Expected Nearby');
+			const tagsHtml = tags.length > 0 ? `<div class="result-tags">${tags.join(' / ')}</div>` : '';
+
+			// Calculate color based on score
+			const hue = score * 1.2;
+
+			// Display format depends on whether there's a common name:
+			// - With common name: common name on top, scientific name (italic) below
+			// - Without common name: scientific name on top, rank below
+			let nameHtml;
+			if (commonName) {
+				nameHtml = `
+					<div class="result-name">${commonName}</div>
+					<div class="result-rank"><em>${scientificName}</em></div>
+				`;
+			} else {
+				nameHtml = `
+					<div class="result-name">${scientificName}</div>
+					<div class="result-rank">${rankName}</div>
+				`;
+			}
 
 			return `
-				<li data-score="${score}" data-taxon-id="${taxon.id}" class="selectable">
-					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : ''}
+				<li class="result-item" data-score="${score}" data-taxon-id="${taxon.id}">
+					<div class="result-border" style="background: hsl(${hue}, 50%, 50%);"></div>
+					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : '<div class="result-photo"></div>'}
 					<div class="result-info">
-						<div class="result-name"><em>${scientificName}</em></div>
-						${commonName ? `<div class="result-common">${commonName}</div>` : ''}
+						${nameHtml}
+						${tagsHtml}
 					</div>
 					<span class="result-score">${score.toFixed(1)}%</span>
+					<a class="view-link" href="https://www.inaturalist.org/taxa/${taxon.id}" target="_blank" onclick="event.stopPropagation();">View</a>
 				</li>
 			`;
 		}).join('');
 
+		listEl.innerHTML = html;
+
+		// Store data for click handlers
+		listEl._cvData = data;
+
 		// Add click handlers to select a result
-		listEl.querySelectorAll('li.selectable').forEach(li => {
+		listEl.querySelectorAll('li.result-item').forEach(li => {
 			li.addEventListener('click', () => {
 				const taxonId = li.dataset.taxonId;
-				const result = data.results.find(r => r.taxon.id == taxonId);
+				const isAncestor = li.dataset.isAncestor === 'true';
 
-				if (result) {
+				let taxon;
+				if (isAncestor && listEl._cvData.common_ancestor) {
+					taxon = listEl._cvData.common_ancestor.taxon;
+				} else {
+					const result = listEl._cvData.results.find(r => r.taxon.id == taxonId);
+					taxon = result?.taxon;
+				}
+
+				if (taxon) {
 					closeCropModal();
-					// Wait for modal to close before interacting with page elements
-					setTimeout(() => applyTaxonToForm(result.taxon), 100);
+					setTimeout(() => applyTaxonToForm(taxon), 100);
 				}
 			});
 		});
 
-		// Apply color vision coloring based on user settings
+		// Apply color display mode and color blind mode
 		chrome.storage.sync.get({
-			enableColorVision: true,
 			colorDisplayMode: 'sidebar',
 			enableColorBlindMode: false
 		}, function(items) {
-			if (!items.enableColorVision) return;
+			// Add class for gradient mode styling
+			if (items.colorDisplayMode === 'gradient') {
+				listEl.classList.add('gradient-mode');
+			} else {
+				listEl.classList.remove('gradient-mode');
+			}
 
-			listEl.querySelectorAll('li[data-score]').forEach(li => {
+			listEl.querySelectorAll('li.result-item[data-score]').forEach(li => {
 				const score = parseFloat(li.dataset.score);
 				let hue = score * 1.2;
 
@@ -567,23 +736,37 @@
 					hue = hue * -1 + 240;
 				}
 
+				const borderEl = li.querySelector('.result-border');
 				if (items.colorDisplayMode === 'gradient') {
-					li.style.background = `linear-gradient(to right, hsl(${hue},50%,50%), white 90%)`;
+					// Apply gradient background, hide sidebar
+					if (borderEl) {
+						borderEl.style.display = 'none';
+					}
+					li.style.background = `linear-gradient(to right, hsl(${hue}, 50%, 50%), white 90%)`;
 				} else {
-					li.style.borderLeft = `7px solid hsl(${hue},50%,50%)`;
+					// Sidebar mode - update color (for color blind mode)
+					if (borderEl) {
+						borderEl.style.background = `hsl(${hue}, 50%, 50%)`;
+					}
 				}
 			});
+
+			// Also handle the ancestor row which doesn't have data-score
+			const ancestorRow = listEl.querySelector('li.result-item[data-is-ancestor="true"]');
+			if (ancestorRow && items.colorDisplayMode === 'gradient') {
+				const borderEl = ancestorRow.querySelector('.result-border');
+				if (borderEl) {
+					borderEl.style.display = 'none';
+				}
+				ancestorRow.style.background = 'linear-gradient(to right, #74ac00, white 90%)';
+			}
 		});
+	}
 
-		// Also show common ancestor if available
-		if (data.common_ancestor) {
-			const ancestor = data.common_ancestor.taxon;
-			const ancestorUrl = `https://www.inaturalist.org/taxa/${ancestor.id}`;
-			const ancestorName = ancestor.preferred_common_name || ancestor.name;
-
-			const headerEl = modal.querySelector('.inat-crop-results-header h4');
-			headerEl.innerHTML = `CV Suggestions <small style="font-weight:normal;color:#666;">(common ancestor: <a href="${ancestorUrl}" target="_blank">${ancestorName}</a>)</small>`;
-		}
+	// Helper to capitalize rank names
+	function capitalizeRank(rank) {
+		if (!rank) return 'Taxon';
+		return rank.charAt(0).toUpperCase() + rank.slice(1);
 	}
 
 	// Get observation metadata from the page

@@ -189,16 +189,43 @@ chrome.storage.sync.get({
 										hue = hue * -1 + 240;
 									}
 
+									const li = div.closest('li');
+
 									if (items.colorDisplayMode === 'gradient') {
 										div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
 									} else {
-										const ul = div.parentNode.parentNode;
-										if (!ul.classList.contains(FLAG_CLASS)) {
-											ul.style.width = parseInt(ul.style.width) + 7 + 'px';
-											ul.classList.add(FLAG_CLASS);
+										// Add rounded sidebar element instead of border-left
+										if (!li.querySelector('.cv-sidebar')) {
+											const ul = div.parentNode.parentNode;
+											if (!ul.classList.contains(FLAG_CLASS)) {
+												ul.style.width = parseInt(ul.style.width) + 10 + 'px';
+												ul.classList.add(FLAG_CLASS);
+											}
+
+											const sidebar = document.createElement('div');
+											sidebar.className = 'cv-sidebar';
+											sidebar.style.cssText = 'width: 6px; background: hsl(' + hue + ', 50%, 50%); border-radius: 3px; position: absolute; left: 8px; top: 4px; bottom: 4px;';
+
+											if (li) {
+												li.style.position = 'relative';
+												li.style.paddingLeft = '18px';
+												li.insertBefore(sidebar, li.firstChild);
+											}
+										}
+									}
+
+									// Add score badge if not already present
+									if (!div.querySelector('.cv-score-badge')) {
+										const badge = document.createElement('span');
+										badge.className = 'cv-score-badge';
+										badge.textContent = score.toFixed(1) + '%';
+										badge.style.cssText = 'font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #74ac00; color: white; flex-shrink: 0; position: absolute; right: 70px; top: 50%; transform: translateY(-50%);';
+
+										if (li) {
+											li.style.position = 'relative';
 										}
 
-										div.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
+										div.appendChild(badge);
 									}
 								});
 							}
