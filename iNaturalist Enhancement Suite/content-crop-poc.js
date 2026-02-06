@@ -27,7 +27,9 @@
 			.inat-crop-trigger-container {
 				display: flex;
 				justify-content: center;
+				gap: 8px;
 				padding: 8px 0;
+				position: relative;
 			}
 			.inat-crop-trigger {
 				background: #74ac00;
@@ -50,6 +52,147 @@
 				width: 16px;
 				height: 16px;
 				fill: currentColor;
+			}
+			/* Floating results panel for Score Image */
+			.inat-score-results {
+				position: absolute;
+				top: 100%;
+				left: 50%;
+				transform: translateX(-50%);
+				background: #fff;
+				border-radius: 8px;
+				width: 500px;
+				max-height: 70vh;
+				overflow-y: auto;
+				box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+				z-index: 10000;
+				display: none;
+			}
+			.inat-score-results.visible {
+				display: block;
+			}
+			.inat-score-results-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 12px 16px;
+				background: #f5f5f5;
+				border-bottom: 1px solid #e0e0e0;
+				font-weight: 600;
+				font-size: 14px;
+				position: sticky;
+				top: 0;
+				z-index: 1;
+			}
+			.inat-score-results-close {
+				background: none;
+				border: none;
+				font-size: 20px;
+				cursor: pointer;
+				color: #666;
+				padding: 0;
+				line-height: 1;
+			}
+			.inat-score-results-close:hover {
+				color: #333;
+			}
+			.inat-score-results-loading {
+				font-size: 12px;
+				color: #666;
+				padding: 12px 16px;
+			}
+			/* Shared results list styles */
+			.inat-crop-results-list {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+			}
+			.inat-crop-results-list .section-header {
+				padding: 8px 16px;
+				background: #f0f0f0;
+				font-size: 13px;
+				color: #333;
+				border-bottom: 1px solid #e0e0e0;
+			}
+			.inat-crop-results-list li.result-item {
+				display: flex;
+				align-items: center;
+				padding: 8px 12px;
+				border-bottom: 1px solid #eee;
+				gap: 8px;
+				cursor: pointer;
+				min-height: 64px;
+				box-sizing: border-box;
+			}
+			.inat-crop-results-list li.result-item:hover {
+				background-color: #f5f5f5;
+			}
+			.inat-crop-results-list .result-border {
+				width: 6px;
+				align-self: stretch;
+				flex-shrink: 0;
+				border-radius: 3px;
+			}
+			.inat-crop-results-list .result-photo {
+				width: 48px;
+				height: 48px;
+				border-radius: 4px;
+				object-fit: cover;
+				flex-shrink: 0;
+				background: #e0e0e0;
+			}
+			.inat-crop-results-list .result-info {
+				flex: 1;
+				min-width: 0;
+				overflow: hidden;
+			}
+			.inat-crop-results-list .result-name {
+				font-weight: 600;
+				font-size: 14px;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.inat-crop-results-list .result-rank {
+				font-size: 12px;
+				color: #666;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			.inat-crop-results-list .result-rank em {
+				font-style: italic;
+			}
+			.inat-crop-results-list .result-tags {
+				font-size: 11px;
+				color: #74ac00;
+				margin-top: 2px;
+			}
+			/* Gradient mode: black text for readability */
+			.inat-crop-results-list.gradient-mode .result-name,
+			.inat-crop-results-list.gradient-mode .result-rank,
+			.inat-crop-results-list.gradient-mode .result-tags {
+				color: #000;
+			}
+			.inat-crop-results-list .result-score {
+				font-size: 11px;
+				font-weight: 600;
+				padding: 2px 8px;
+				border-radius: 10px;
+				background: #74ac00;
+				color: white;
+				flex-shrink: 0;
+				margin-right: 8px;
+			}
+			.inat-crop-results-list .view-link {
+				color: #333;
+				font-size: 13px;
+				text-decoration: none;
+				flex-shrink: 0;
+				padding: 4px 8px;
+			}
+			.inat-crop-results-list .view-link:hover {
+				text-decoration: underline;
 			}
 		`;
 
@@ -118,9 +261,6 @@
 				top: 50%;
 				left: 50%;
 				transform: translate(-50%, -50%);
-				display: flex;
-				align-items: flex-start;
-				gap: 12px;
 			}
 			.inat-crop-overlay {
 				position: absolute;
@@ -131,6 +271,7 @@
 				background: rgba(0, 0, 0, 0.8);
 			}
 			.inat-crop-container {
+				position: relative;
 				background: #fff;
 				border-radius: 8px;
 				max-width: min(800px, 90vw);
@@ -138,7 +279,6 @@
 				overflow: hidden;
 				display: flex;
 				flex-direction: column;
-				flex-shrink: 0;
 			}
 			.inat-crop-header {
 				display: flex;
@@ -257,17 +397,20 @@
 				border: 1px solid #ccc;
 			}
 			.inat-crop-results {
+				position: absolute;
+				top: 0;
+				left: 100%;
+				margin-left: 12px;
 				background: #fff;
 				border-radius: 8px;
 				width: 500px;
 				max-height: 85vh;
 				overflow-y: auto;
 				box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-				flex-shrink: 0;
-				visibility: hidden;
+				display: none;
 			}
 			.inat-crop-results.visible {
-				visibility: visible;
+				display: block;
 			}
 			.inat-crop-results-header {
 				display: flex;
@@ -400,10 +543,19 @@
 	let modal = null;
 	let cropper = null;
 	let cvResultsCache = null; // Cache for CV results, invalidated on crop change
+	let modalInitialized = false;
+	let scoreResultsCache = null;
+	let lastScoredImageUrl = null;
+	let scoreResultsVisible = false;
 
-	function openCropModal(imageUrl) {
+	// Ensure modal exists and event listeners are set up
+	function ensureModalExists() {
 		if (!modal) {
 			modal = createCropModal();
+		}
+
+		if (!modalInitialized) {
+			modalInitialized = true;
 
 			// Event listeners
 			modal.querySelector('.inat-crop-close').addEventListener('click', closeCropModal);
@@ -414,18 +566,32 @@
 				modal.querySelector('.inat-crop-results').classList.remove('visible');
 			});
 
-			// Handle Escape key - close results first, then modal
+			// Handle Escape key
 			document.addEventListener('keydown', (e) => {
-				if (e.key === 'Escape' && modal.classList.contains('active')) {
-					const resultsEl = modal.querySelector('.inat-crop-results');
-					if (resultsEl.classList.contains('visible')) {
-						resultsEl.classList.remove('visible');
-					} else {
-						closeCropModal();
+				if (e.key === 'Escape') {
+					// First check standalone score results panel
+					if (scoreResultsVisible) {
+						closeScoreResults();
+						return;
+					}
+					// Then check modal
+					if (modal.classList.contains('active')) {
+						const resultsEl = modal.querySelector('.inat-crop-results');
+						if (resultsEl.classList.contains('visible')) {
+							resultsEl.classList.remove('visible');
+						} else {
+							closeCropModal();
+						}
 					}
 				}
 			});
 		}
+
+		return modal;
+	}
+
+	function openCropModal(imageUrl) {
+		ensureModalExists();
 
 		const cropImage = modal.querySelector('#inat-crop-image');
 		const loadingEl = modal.querySelector('.inat-crop-loading');
@@ -500,6 +666,140 @@
 			cropper.destroy();
 			cropper = null;
 		}
+	}
+
+	// Standalone results panel for Score Image (separate from modal)
+	let scoreResultsPanel = null;
+
+	function createScoreResultsPanel() {
+		const panel = document.createElement('div');
+		panel.id = 'inat-score-results-panel';
+		panel.innerHTML = `
+			<div class="inat-score-results-header">
+				<span>CV Suggestions</span>
+				<button class="inat-score-results-close">&times;</button>
+			</div>
+			<div class="inat-score-results-loading">Loading suggestions...</div>
+			<ul class="inat-crop-results-list"></ul>
+		`;
+
+		// Add styles for the standalone panel
+		const style = document.createElement('style');
+		style.textContent = `
+			#inat-score-results-panel {
+				position: fixed;
+				background: #fff;
+				border-radius: 8px;
+				width: 500px;
+				max-height: 70vh;
+				overflow-y: auto;
+				box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+				z-index: 10001;
+				display: none;
+			}
+			#inat-score-results-panel.visible {
+				display: block;
+			}
+			#inat-score-results-panel .inat-score-results-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 12px 16px;
+				background: #f5f5f5;
+				border-bottom: 1px solid #e0e0e0;
+				font-weight: 600;
+				font-size: 14px;
+				position: sticky;
+				top: 0;
+				z-index: 1;
+			}
+			#inat-score-results-panel .inat-score-results-close {
+				background: none;
+				border: none;
+				font-size: 20px;
+				cursor: pointer;
+				color: #666;
+				padding: 0;
+				line-height: 1;
+			}
+			#inat-score-results-panel .inat-score-results-close:hover {
+				color: #333;
+			}
+			#inat-score-results-panel .inat-score-results-loading {
+				font-size: 12px;
+				color: #666;
+				padding: 12px 16px;
+			}
+		`;
+		document.head.appendChild(style);
+
+		panel.querySelector('.inat-score-results-close').addEventListener('click', closeScoreResults);
+
+		document.body.appendChild(panel);
+		return panel;
+	}
+
+	// Score an image without cropping
+	async function scoreCurrentImage(imageUrl, buttonContainer) {
+		// Create standalone panel if needed
+		if (!scoreResultsPanel) {
+			scoreResultsPanel = createScoreResultsPanel();
+		}
+
+		const loadingEl = scoreResultsPanel.querySelector('.inat-score-results-loading');
+		const resultsList = scoreResultsPanel.querySelector('.inat-crop-results-list');
+
+		// Position the panel centered horizontally, near top of viewport
+		scoreResultsPanel.style.top = '10vh';
+		scoreResultsPanel.style.left = '50%';
+		scoreResultsPanel.style.transform = 'translateX(-50%)';
+
+		// Show the panel
+		scoreResultsPanel.classList.add('visible');
+		scoreResultsVisible = true;
+
+		// Check cache - only use if same image
+		if (scoreResultsCache && lastScoredImageUrl === imageUrl) {
+			console.log('[iNat Enhancement] Using cached score results');
+			loadingEl.style.display = 'none';
+			displayCVResults(scoreResultsCache, resultsList, closeScoreResults);
+			return;
+		}
+
+		// Show loading state
+		loadingEl.textContent = 'Loading suggestions...';
+		loadingEl.style.display = 'block';
+		resultsList.innerHTML = '';
+
+		try {
+			// Fetch image via background script
+			const imageDataUrl = await fetchImageViaBackground(imageUrl);
+
+			// Get observation metadata
+			const metadata = getObservationMetadata();
+
+			// Call score_image API
+			const data = await callScoreImageAPI(imageDataUrl, metadata);
+			console.log('[iNat Enhancement] Score results:', data);
+
+			// Cache the results
+			scoreResultsCache = data;
+			lastScoredImageUrl = imageUrl;
+
+			loadingEl.style.display = 'none';
+			displayCVResults(data, resultsList, closeScoreResults);
+		} catch (error) {
+			console.error('[iNat Enhancement] Score image error:', error);
+			loadingEl.textContent = 'Error: ' + error.message;
+		}
+	}
+
+	function closeScoreResults() {
+		if (scoreResultsPanel) {
+			scoreResultsPanel.classList.remove('visible');
+			scoreResultsPanel.style.transform = '';
+		}
+		scoreResultsVisible = false;
 	}
 
 	// Apply selected taxon to the identification form via page context (has jQuery access)
@@ -604,7 +904,7 @@
 	}
 
 	// Display CV results in the list (styled like iNaturalist's autocomplete)
-	function displayCVResults(data, listEl) {
+	function displayCVResults(data, listEl, onClose) {
 		if (!data.results || data.results.length === 0) {
 			listEl.innerHTML = '<li class="section-header">No suggestions found</li>';
 			return;
@@ -710,7 +1010,11 @@
 				}
 
 				if (taxon) {
-					closeCropModal();
+					if (onClose) {
+						onClose();
+					} else {
+						closeCropModal();
+					}
 					setTimeout(() => applyTaxonToForm(taxon), 100);
 				}
 			});
@@ -974,16 +1278,40 @@
 		const container = document.createElement('div');
 		container.className = 'inat-crop-trigger-container';
 
-		const button = document.createElement('button');
-		button.className = 'inat-crop-trigger';
-		button.innerHTML = `
+		// Score Image button (left)
+		const scoreButton = document.createElement('button');
+		scoreButton.className = 'inat-crop-trigger';
+		scoreButton.innerHTML = `
+			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+				<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+			</svg>
+			Score Image
+		`;
+
+		scoreButton.addEventListener('click', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+
+			const imageUrl = getCurrentPhotoUrl();
+			if (!imageUrl) {
+				alert('Could not find photo to score');
+				return;
+			}
+
+			scoreCurrentImage(imageUrl, container);
+		});
+
+		// Crop button (right)
+		const cropButton = document.createElement('button');
+		cropButton.className = 'inat-crop-trigger';
+		cropButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 				<path d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/>
 			</svg>
 			Crop for CV
 		`;
 
-		button.addEventListener('click', function(e) {
+		cropButton.addEventListener('click', function(e) {
 			e.preventDefault();
 			e.stopPropagation();
 
@@ -993,16 +1321,29 @@
 				return;
 			}
 
+			// Close score results if open
+			closeScoreResults();
+
 			loadCropperCSS();
 			openCropModal(imageUrl);
 		});
 
-		container.appendChild(button);
+		container.appendChild(scoreButton);
+		container.appendChild(cropButton);
 
 		// Insert after the target container
 		targetContainer.parentNode.insertBefore(container, targetContainer.nextSibling);
 
-		console.log('Crop button added');
+		// Close score results panel when clicking outside
+		document.addEventListener('click', (e) => {
+			if (scoreResultsVisible && scoreResultsPanel) {
+				if (!scoreResultsPanel.contains(e.target) && !container.contains(e.target)) {
+					closeScoreResults();
+				}
+			}
+		});
+
+		console.log('Score and Crop buttons added');
 	}
 
 	// Watch for the photo gallery to appear
