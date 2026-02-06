@@ -421,81 +421,43 @@
 		}
 	}
 
-	// Apply the selected identification to the suggestion input
-	function applyIdentification(scientificName) {
-		console.log('[iNat Enhancement] Attempting to apply identification:', scientificName);
-
+	// Apply selected taxon to the identification form via page context (has jQuery access)
+	function applyTaxonToForm(taxon) {
 		// Find and click the "Suggest an Identification" tab
-		const tabSelectors = [
-			'a[href="#activity_suggest_tab"]',
-			'[role="tab"][aria-controls*="suggest"]',
-			'.ActivityCreatePanel .nav-tabs li:nth-child(2) a',
-			'.nav-tabs a'
-		];
-
-		let idTab = null;
-		for (const selector of tabSelectors) {
-			try {
-				const tabs = document.querySelectorAll(selector);
-				for (const tab of tabs) {
-					if (tab.textContent.includes('Suggest')) {
-						idTab = tab;
-						break;
-					}
-				}
-				if (idTab) break;
-			} catch (e) {
-				console.warn('[iNat Enhancement] Invalid selector:', selector);
+		const tabs = document.querySelectorAll('.nav-tabs a');
+		for (const tab of tabs) {
+			if (tab.textContent.includes('Suggest')) {
+				tab.click();
+				break;
 			}
 		}
 
-		console.log('[iNat Enhancement] Found tab:', idTab);
-
-		if (idTab) {
-			idTab.click();
-			console.log('[iNat Enhancement] Clicked tab');
-		}
-
-		// Wait a bit for tab content to render, then find input
 		setTimeout(() => {
-			// Find the identification input
-			const inputSelectors = [
-				'.IdentificationForm input[type="text"]',
-				'.TaxonAutocomplete input[type="text"]',
-				'input[placeholder*="Species"]',
-				'input[placeholder*="species"]',
-				'.ActiveTab input[type="text"]',
-				'#activity_suggest_tab input[type="text"]',
-				'.tab-pane.active input[type="text"]'
-			];
-
-			let input = null;
-			for (const selector of inputSelectors) {
-				input = document.querySelector(selector);
-				console.log('[iNat Enhancement] Trying selector:', selector, '-> found:', input);
-				if (input) break;
+			// Scroll to the form
+			const container = document.querySelector('.TaxonAutocomplete');
+			if (container) {
+				container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			}
 
-			if (!input) {
-				console.warn('[iNat Enhancement] Could not find identification input');
-				alert('Could not find identification input. Please manually enter: ' + scientificName);
-				return;
+			// Send request to page context (domContext.js) which has jQuery access
+			const requestId = Math.random().toString(36).substring(2);
+
+			function handleResponse(event) {
+				if (event.detail.requestId !== requestId) return;
+				document.removeEventListener('selectTaxonResponse', handleResponse);
+
+				if (event.detail.success) {
+					console.log('[iNat Enhancement] Taxon selection applied:', taxon.name);
+				} else {
+					console.error('[iNat Enhancement] Failed to apply taxon:', event.detail.error);
+					alert('Could not apply selection: ' + event.detail.error);
+				}
 			}
+			document.addEventListener('selectTaxonResponse', handleResponse);
 
-			// Scroll to and focus the input
-			input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-			// Set the value and trigger input events
-			input.focus();
-			input.value = scientificName;
-
-			// Trigger events to notify React/jQuery of the change
-			input.dispatchEvent(new Event('input', { bubbles: true }));
-			input.dispatchEvent(new Event('change', { bubbles: true }));
-			input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }));
-			input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-
-			console.log('[iNat Enhancement] Applied identification:', scientificName);
+			document.dispatchEvent(new CustomEvent('selectTaxonRequest', {
+				detail: { taxon, requestId }
+			}));
 		}, 200);
 	}
 
@@ -564,7 +526,7 @@
 			const commonName = taxon.preferred_common_name || '';
 
 			return `
-				<li data-score="${score}" data-scientific-name="${scientificName}" class="selectable">
+				<li data-score="${score}" data-taxon-id="${taxon.id}" class="selectable">
 					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : ''}
 					<div class="result-info">
 						<div class="result-name"><em>${scientificName}</em></div>
@@ -578,10 +540,14 @@
 		// Add click handlers to select a result
 		listEl.querySelectorAll('li.selectable').forEach(li => {
 			li.addEventListener('click', () => {
-				const scientificName = li.dataset.scientificName;
-				closeCropModal();
-				// Wait for modal to close before interacting with page elements
-				setTimeout(() => applyIdentification(scientificName), 100);
+				const taxonId = li.dataset.taxonId;
+				const result = data.results.find(r => r.taxon.id == taxonId);
+
+				if (result) {
+					closeCropModal();
+					// Wait for modal to close before interacting with page elements
+					setTimeout(() => applyTaxonToForm(result.taxon), 100);
+				}
 			});
 		});
 

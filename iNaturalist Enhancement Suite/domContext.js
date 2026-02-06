@@ -123,6 +123,110 @@ document.addEventListener('scoreImageRequest', async (event) => {
 	}
 });
 
+// Listen for taxon selection requests from content script
+document.addEventListener('selectTaxonRequest', (event) => {
+	const { taxon, requestId } = event.detail;
+
+	try {
+		const container = document.querySelector('.TaxonAutocomplete');
+		const input = container?.querySelector('input.ui-autocomplete-input');
+
+		if (!container || !input) {
+			throw new Error('Could not find autocomplete input');
+		}
+
+		const $input = $(input);
+
+		// Ensure taxon has title property
+		if (!taxon.title) {
+			taxon.title = taxon.preferred_common_name
+				? `${taxon.preferred_common_name} · ${taxon.name}`
+				: taxon.name;
+		}
+
+		console.log('[iNat Enhancement] Triggering autocomplete search for:', taxon.name);
+
+		// Focus input and set its value to trigger autocomplete search
+		input.focus();
+		$input.val(taxon.name);
+
+		// Trigger the autocomplete search
+		$input.autocomplete('search', taxon.name);
+
+		// Wait for dropdown to appear, then click the matching result
+		let attempts = 0;
+		const maxAttempts = 30;
+		const checkInterval = setInterval(() => {
+			attempts++;
+			const menu = container.querySelector('.ui-autocomplete');
+
+			if (menu && menu.children.length > 0 && menu.style.display !== 'none') {
+				clearInterval(checkInterval);
+
+				// Small delay to let the menu fully render
+				setTimeout(() => {
+					const results = menu.querySelectorAll('.ac-result');
+					console.log('[iNat Enhancement] Found', results.length, 'autocomplete results');
+
+					let targetResult = results[0]; // Default to first
+					for (const result of results) {
+						if (result.dataset.taxonId == taxon.id) {
+							targetResult = result;
+							break;
+						}
+					}
+
+					if (!targetResult) {
+						targetResult = menu.querySelector('li');
+					}
+
+					if (targetResult) {
+						// Simulate proper mouse events
+						targetResult.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+						targetResult.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+						targetResult.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+					}
+
+					// Force close the dropdown and update thumbnail
+					setTimeout(() => {
+						$input.autocomplete('close');
+						$(menu).hide();
+						input.blur();
+
+						// Update the thumbnail - it's a div with background-image, not an img tag
+						const thumbDiv = container.querySelector('.ac-select-thumb');
+						if (thumbDiv && taxon.default_photo?.square_url) {
+							thumbDiv.style.backgroundImage = `url("${taxon.default_photo.square_url}")`;
+							console.log('[iNat Enhancement] Updated thumbnail background to:', taxon.default_photo.square_url);
+						}
+
+						// Scroll the container into view
+						container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					}, 100);
+
+					document.dispatchEvent(new CustomEvent('selectTaxonResponse', {
+						detail: { requestId, success: true }
+					}));
+				}, 100);
+			}
+
+			if (attempts >= maxAttempts) {
+				clearInterval(checkInterval);
+				console.warn('[iNat Enhancement] Autocomplete dropdown did not appear');
+				document.dispatchEvent(new CustomEvent('selectTaxonResponse', {
+					detail: { requestId, success: false, error: 'Autocomplete dropdown did not appear' }
+				}));
+			}
+		}, 100);
+
+	} catch (error) {
+		console.error('[iNat Enhancement] selectTaxon error:', error);
+		document.dispatchEvent(new CustomEvent('selectTaxonResponse', {
+			detail: { requestId, success: false, error: error.message }
+		}));
+	}
+});
+
 const oldFetch = window.fetch;
 window.fetch = async (url, options) => {
     const response = await oldFetch(url, options);
