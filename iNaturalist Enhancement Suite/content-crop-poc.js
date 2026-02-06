@@ -260,7 +260,7 @@
 				position: absolute;
 				top: 50%;
 				left: 50%;
-				transform: translate(-50%, -50%);
+				transform: translate(calc(-50% - 256px), -50%);
 			}
 			.inat-crop-overlay {
 				position: absolute;
@@ -274,7 +274,7 @@
 				position: relative;
 				background: #fff;
 				border-radius: 8px;
-				max-width: min(800px, 90vw);
+				width: min(700px, 80vw);
 				max-height: 85vh;
 				overflow: hidden;
 				display: flex;
@@ -407,10 +407,10 @@
 				max-height: 85vh;
 				overflow-y: auto;
 				box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-				display: none;
+				visibility: hidden;
 			}
 			.inat-crop-results.visible {
-				display: block;
+				visibility: visible;
 			}
 			.inat-crop-results-header {
 				display: flex;
@@ -749,10 +749,11 @@
 		const loadingEl = scoreResultsPanel.querySelector('.inat-score-results-loading');
 		const resultsList = scoreResultsPanel.querySelector('.inat-crop-results-list');
 
-		// Position the panel centered horizontally, near top of viewport
-		scoreResultsPanel.style.top = '10vh';
-		scoreResultsPanel.style.left = '50%';
-		scoreResultsPanel.style.transform = 'translateX(-50%)';
+		// Position the panel just to the right of the image container
+		const containerRect = buttonContainer.getBoundingClientRect();
+		scoreResultsPanel.style.top = '150px';
+		scoreResultsPanel.style.left = (containerRect.right + 20) + 'px';
+		scoreResultsPanel.style.right = 'auto';
 
 		// Show the panel
 		scoreResultsPanel.classList.add('visible');
@@ -797,7 +798,6 @@
 	function closeScoreResults() {
 		if (scoreResultsPanel) {
 			scoreResultsPanel.classList.remove('visible');
-			scoreResultsPanel.style.transform = '';
 		}
 		scoreResultsVisible = false;
 	}
@@ -1340,6 +1340,13 @@
 				if (!scoreResultsPanel.contains(e.target) && !container.contains(e.target)) {
 					closeScoreResults();
 				}
+			}
+		});
+
+		// Close score results panel on Escape
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && scoreResultsVisible) {
+				closeScoreResults();
 			}
 		});
 
