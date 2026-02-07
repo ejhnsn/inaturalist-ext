@@ -194,17 +194,17 @@ chrome.storage.sync.get({
 											if (!li.querySelector('.cv-sidebar')) {
 												const ul = div.parentNode.parentNode;
 												if (!ul.classList.contains(FLAG_CLASS)) {
-													ul.style.width = parseInt(ul.style.width) + 10 + 'px';
+													ul.style.width = parseInt(ul.style.width) + 18 + 'px';
 													ul.classList.add(FLAG_CLASS);
 												}
 
 												const sidebar = document.createElement('div');
 												sidebar.className = 'cv-sidebar';
-												sidebar.style.cssText = 'width: 6px; background: hsl(' + hue + ', 50%, 50%); border-radius: 3px; position: absolute; left: 8px; top: 4px; bottom: 4px;';
+												sidebar.style.cssText = 'width: 6px; background: hsl(' + hue + ', 50%, 50%); border-radius: 3px; position: absolute; left: 4px; top: 4px; bottom: 4px;';
 
 												if (li) {
 													li.style.position = 'relative';
-													li.style.paddingLeft = '18px';
+													li.style.paddingLeft = '14px';
 													li.insertBefore(sidebar, li.firstChild);
 												}
 											}
