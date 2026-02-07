@@ -1,8 +1,17 @@
 // POC: Cropper.js integration for iNaturalist observation images
 // This adds a "Crop for CV" button to observation photos
 
-(function() {
-	'use strict';
+chrome.storage.sync.get({
+	enableScoreImageTools: true
+}, function(items) {
+	if (!items.enableScoreImageTools) {
+		return;
+	}
+
+	// Use shared logging from logging.js
+	const log = window.iNatLog || console.log;
+	const logError = window.iNatLogError || console.error;
+	const logWarn = window.iNatLogWarn || console.warn;
 
 	// Load Cropper.js CSS from extension bundle
 	let cropperCssLoaded = false;
@@ -637,7 +646,7 @@
 				// Invalidate CV cache when crop area changes
 				cropend: function() {
 					cvResultsCache = null;
-					console.log('[iNat Enhancement] Crop changed, cache invalidated');
+					log('Crop changed, cache invalidated');
 				}
 			});
 		}
@@ -649,7 +658,7 @@
 				cropImage.src = dataUrl;
 			})
 			.catch(error => {
-				console.error('Failed to fetch image:', error);
+				logError('Failed to fetch image:', error);
 				loadingEl.classList.remove('active');
 				alert('Failed to load image: ' + error.message);
 				closeCropModal();
@@ -761,7 +770,7 @@
 
 		// Check cache - only use if same image
 		if (scoreResultsCache && lastScoredImageUrl === imageUrl) {
-			console.log('[iNat Enhancement] Using cached score results');
+			log('Using cached score results');
 			loadingEl.style.display = 'none';
 			displayCVResults(scoreResultsCache, resultsList, closeScoreResults);
 			return;
@@ -781,7 +790,7 @@
 
 			// Call score_image API
 			const data = await callScoreImageAPI(imageDataUrl, metadata);
-			console.log('[iNat Enhancement] Score results:', data);
+			log('Score results:', data);
 
 			// Cache the results
 			scoreResultsCache = data;
@@ -790,7 +799,7 @@
 			loadingEl.style.display = 'none';
 			displayCVResults(data, resultsList, closeScoreResults);
 		} catch (error) {
-			console.error('[iNat Enhancement] Score image error:', error);
+			logError('Score image error:', error);
 			loadingEl.textContent = 'Error: ' + error.message;
 		}
 	}
@@ -828,9 +837,9 @@
 				document.removeEventListener('selectTaxonResponse', handleResponse);
 
 				if (event.detail.success) {
-					console.log('[iNat Enhancement] Taxon selection applied:', taxon.name);
+					log('Taxon selection applied:', taxon.name);
 				} else {
-					console.error('[iNat Enhancement] Failed to apply taxon:', event.detail.error);
+					logError('Failed to apply taxon:', event.detail.error);
 					alert('Could not apply selection: ' + event.detail.error);
 				}
 			}
@@ -867,7 +876,7 @@
 
 		// Check cache first
 		if (cvResultsCache) {
-			console.log('[iNat Enhancement] Using cached CV results');
+			log('Using cached CV results');
 			resultsLoading.style.display = 'none';
 			displayCVResults(cvResultsCache, resultsList);
 			return;
@@ -880,16 +889,16 @@
 
 		// Get observation metadata
 		const metadata = getObservationMetadata();
-		console.log('Observation metadata:', metadata);
+		log('Observation metadata:', metadata);
 
 		// Convert canvas to data URL and call API via background script
 		const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
 		(async function() {
 			try {
-				console.log('Calling score_image API...');
+				log('Calling score_image API');
 				const data = await callScoreImageAPI(imageDataUrl, metadata);
-				console.log('CV results:', data);
+				log('CV results:', data);
 
 				// Cache the results
 				cvResultsCache = data;
@@ -897,7 +906,7 @@
 				resultsLoading.style.display = 'none';
 				displayCVResults(data, resultsList);
 			} catch (error) {
-				console.error('score_image API error:', error);
+				logError('score_image API error:', error);
 				resultsLoading.textContent = 'Error: ' + error.message;
 			}
 		})();
@@ -1020,11 +1029,29 @@
 			});
 		});
 
-		// Apply color display mode and color blind mode
+		// Apply color display mode, color blind mode, and percentage visibility
 		chrome.storage.sync.get({
+			enableColorVision: true,
 			colorDisplayMode: 'sidebar',
-			enableColorBlindMode: false
+			enableColorBlindMode: false,
+			enableCVPercentages: true
 		}, function(items) {
+			// Hide score badges if percentages are disabled
+			if (!items.enableCVPercentages) {
+				listEl.querySelectorAll('.result-score').forEach(el => {
+					el.style.display = 'none';
+				});
+			}
+
+			// Skip color styling if color vision is disabled
+			if (!items.enableColorVision) {
+				// Hide color borders
+				listEl.querySelectorAll('.result-border').forEach(el => {
+					el.style.display = 'none';
+				});
+				return;
+			}
+
 			// Add class for gradient mode styling
 			if (items.colorDisplayMode === 'gradient') {
 				listEl.classList.add('gradient-mode');
@@ -1120,7 +1147,7 @@
 
 		// Validate observed_on - should look like a date, not garbage
 		if (metadata.observed_on && !/^\d{4}|^\w{3}\s|^\d{1,2}[\/-]/.test(metadata.observed_on)) {
-			console.warn('Invalid observed_on value, ignoring:', metadata.observed_on);
+			logWarn('Invalid observed_on value, ignoring:', metadata.observed_on);
 			metadata.observed_on = null;
 		}
 
@@ -1234,27 +1261,33 @@
 		prefetchStarted = true;
 
 		const urls = getGalleryImageUrls();
-		console.log(`Prefetching ${urls.length} gallery images...`);
+		log(`Prefetching ${urls.length} gallery images`);
 
 		// Fetch sequentially to avoid overwhelming the network
 		urls.reduce((chain, url) => {
 			return chain.then(() => {
 				if (!imageCache.has(url)) {
 					return fetchImageViaBackground(url).catch(err => {
-						console.warn('Failed to prefetch:', url, err);
+						logWarn('Failed to prefetch:', url, err);
 					});
 				}
 			});
 		}, Promise.resolve());
 	}
 
-	// Create and add the crop button to a stable location
-	function addCropButton() {
-		// Inject styles first
-		injectButtonStyles();
+	// Check if user is logged in by looking for API token
+	function hasApiToken() {
+		const metaToken = document.querySelector('meta[name="inaturalist-api-token"]');
+		return metaToken && metaToken.content;
+	}
 
+	// Create and add the crop button to a stable location
+	function addScoreAndCropButtons() {
 		// Don't add if already exists
 		if (document.querySelector('.inat-crop-trigger-container')) return;
+
+		// Inject styles first
+		injectButtonStyles();
 
 		// Find a stable container - the photo browser or gallery wrapper
 		const targetSelectors = [
@@ -1270,7 +1303,7 @@
 		}
 
 		if (!targetContainer) {
-			console.log('Crop POC: No suitable container found');
+			log('Crop POC: No suitable container found');
 			return;
 		}
 
@@ -1350,11 +1383,17 @@
 			}
 		});
 
-		console.log('Score and Crop buttons added');
+		log('Score and Crop buttons added');
 	}
 
 	// Watch for the photo gallery to appear
 	function init() {
+		// Check for API token once upfront (user must be logged in)
+		if (!hasApiToken()) {
+			log('Score Image & Crop tools enabled but require login - buttons not shown');
+			return;
+		}
+
 		// Wait for the gallery/photo elements to load, then add our button
 		const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
 
@@ -1362,13 +1401,13 @@
 			document.arrive(selector, { existing: true }, function() {
 				// Small delay to ensure the gallery is fully rendered
 				setTimeout(() => {
-					addCropButton();
+					addScoreAndCropButtons();
 					prefetchGalleryImages();
 				}, 100);
 			});
 		}
 
-		console.log('iNaturalist Crop POC initialized');
+		log('iNaturalist Crop POC initialized');
 	}
 
 	// Start when DOM is ready
@@ -1377,4 +1416,4 @@
 	} else {
 		init();
 	}
-})();
+});

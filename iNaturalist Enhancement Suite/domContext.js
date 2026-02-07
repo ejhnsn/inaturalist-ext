@@ -63,11 +63,11 @@ HTMLCanvasElement.prototype.toBlob = function() {
 function getApiToken() {
 	const metaToken = document.querySelector('meta[name="inaturalist-api-token"]');
 	if (metaToken && metaToken.content) {
-		console.log('[iNat Enhancement] Found API token in meta tag');
+		console.log('[iNat Enhancement Suite] Found API token in meta tag');
 		return metaToken.content;
 	}
 
-	console.log('[iNat Enhancement] No API token found - user may not be logged in');
+	console.log('[iNat Enhancement Suite] No API token found - user may not be logged in');
 	return null;
 }
 
@@ -144,8 +144,6 @@ document.addEventListener('selectTaxonRequest', (event) => {
 				: taxon.name;
 		}
 
-		console.log('[iNat Enhancement] Triggering autocomplete search for:', taxon.name);
-
 		// Focus input and set its value to trigger autocomplete search
 		input.focus();
 		$input.val(taxon.name);
@@ -166,7 +164,6 @@ document.addEventListener('selectTaxonRequest', (event) => {
 				// Small delay to let the menu fully render
 				setTimeout(() => {
 					const results = menu.querySelectorAll('.ac-result');
-					console.log('[iNat Enhancement] Found', results.length, 'autocomplete results');
 
 					let targetResult = results[0]; // Default to first
 					for (const result of results) {
@@ -197,7 +194,6 @@ document.addEventListener('selectTaxonRequest', (event) => {
 						const thumbDiv = container.querySelector('.ac-select-thumb');
 						if (thumbDiv && taxon.default_photo?.square_url) {
 							thumbDiv.style.backgroundImage = `url("${taxon.default_photo.square_url}")`;
-							console.log('[iNat Enhancement] Updated thumbnail background to:', taxon.default_photo.square_url);
 						}
 
 						// Scroll the container into view

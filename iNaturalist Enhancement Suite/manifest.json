@@ -56,7 +56,7 @@
         "https://*.inaturalist.lu/observations/*",
         "https://*.www.naturalista.uy/observations/*"
       ],
-      "js": ["arrive-2.4.1.min.js","cropper.min.js","content-observation.js","content-crop-poc.js"],
+      "js": ["logging.js","arrive-2.4.1.min.js","cropper.min.js","content-observation.js","content-crop-poc.js"],
 	    "run_at": "document_start"
     }, {
       "matches": [
@@ -73,7 +73,7 @@
         "https://*.inaturalist.lu/observations/upload", 
         "https://*.www.naturalista.uy/observations/*upload"
       ],
-      "js": ["arrive-2.4.1.min.js","content-upload.js"],
+      "js": ["logging.js","arrive-2.4.1.min.js","content-upload.js"],
 	    "run_at": "document_start"
     }, {
       "matches": [
@@ -90,7 +90,7 @@
         "https://*.inaturalist.lu/taxa/*", 
         "https://*.www.naturalista.uy/taxa/*"
       ],
-      "js": ["arrive-2.4.1.min.js","content-taxa.js"],
+      "js": ["logging.js","arrive-2.4.1.min.js","content-taxa.js"],
 	    "run_at": "document_start"
     }
   ],

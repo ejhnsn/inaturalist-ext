@@ -2,11 +2,10 @@ chrome.storage.sync.get({
 	enableCopyGeo: true,
 	enableLogging: false
 }, function(items) {
-	const LOGGING_ENABLED = items.enableLogging;
+	// Use shared logging from logging.js
+	const logDebug = window.iNatLogDebug || console.debug;
 
-	if (LOGGING_ENABLED) {
-		console.debug(items);
-	}
+	logDebug('Settings loaded:', items);
 
 	if (items.enableCopyGeo) {
 		document.arrive('div.GooglePlacesAutocomplete > input[type="text"]', input => {
