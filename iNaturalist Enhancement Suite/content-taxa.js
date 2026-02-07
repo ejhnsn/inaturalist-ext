@@ -2,11 +2,10 @@ chrome.storage.sync.get({
 	enableCount: true,
 	enableLogging: false
 }, async function(items) {
-	const LOGGING_ENABLED = items.enableLogging;
+	// Use shared logging from logging.js
+	const logDebug = window.iNatLogDebug || console.debug;
 
-	if (LOGGING_ENABLED) {
-		console.debug(items);
-	}
+	logDebug('Settings loaded:', items);
 
 	if (!items.enableCount) {
 		return;
@@ -32,18 +31,14 @@ chrome.storage.sync.get({
 			placeId = placeMatch[1];
 		}
 
-		if (LOGGING_ENABLED) {
-			console.debug({ user, taxonId, placeId });
-		}
+		logDebug({ user, taxonId, placeId });
 
 		const count = await getObservationCount(user, taxonId, placeId);
 		if (count) {
 			for (const span of a.querySelectorAll('span')) {
-				span.innerHTML += `: <b>${count}</b>`;		
-				if (LOGGING_ENABLED) {
-					console.debug(span);
-				}
-			}		
+				span.innerHTML += `: <b>${count}</b>`;
+				logDebug(span);
+			}
 		}
 	});
 
@@ -52,10 +47,7 @@ chrome.storage.sync.get({
 		const key = `${taxonId}#${placeId || 'null'}`
 		let count = counts.get(key);
 		if (count !== undefined) {
-			if (LOGGING_ENABLED) {
-				console.debug(`Using cached count ${count} for ${key}.`);
-			}
-
+			logDebug(`Using cached count ${count} for ${key}.`);
 			return count;
 		}
 
@@ -64,16 +56,12 @@ chrome.storage.sync.get({
 			url += `&place_id=${placeId}`;
 		}
 
-		if (LOGGING_ENABLED) {
-			console.debug(`Requesting ${url}`);
-		}
+		logDebug(`Requesting ${url}`);
 
 		const response = await fetch(url);
 		const observations = await response.json();
 		count = observations.total_results;
-		if (LOGGING_ENABLED) {
-			console.debug(`Retrieved count ${count} for ${key}.`);
-		}
+		logDebug(`Retrieved count ${count} for ${key}.`);
 
 		counts.set(key, count);
 		return count;
