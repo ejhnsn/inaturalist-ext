@@ -1,5 +1,5 @@
-// POC: Cropper.js integration for iNaturalist observation images
-// This adds a "Crop for CV" button to observation photos
+// Score Image and Crop for CV functionality
+// Adds buttons to observation photos for getting computer vision suggestions
 
 chrome.storage.sync.get({
 	enableScoreImageTools: true
@@ -1211,7 +1211,7 @@ chrome.storage.sync.get({
 		}
 
 		if (!targetContainer) {
-			log('Crop POC: No suitable container found');
+			log('No suitable container found for Score/Crop buttons');
 			return;
 		}
 
@@ -1315,7 +1315,7 @@ chrome.storage.sync.get({
 			});
 		}
 
-		log('iNaturalist Crop POC initialized');
+		log('Score Image & Crop initialized');
 	}
 
 	// Start when DOM is ready

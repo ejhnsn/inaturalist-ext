@@ -56,7 +56,7 @@
         "https://*.inaturalist.lu/observations/*",
         "https://*.www.naturalista.uy/observations/*"
       ],
-      "js": ["logging.js","arrive-2.4.1.min.js","cropper.min.js","content-observation.js","content-crop-poc.js"],
+      "js": ["logging.js","arrive-2.4.1.min.js","cropper.min.js","content-observation.js","content-score-crop.js"],
 	    "run_at": "document_start"
     }, {
       "matches": [
