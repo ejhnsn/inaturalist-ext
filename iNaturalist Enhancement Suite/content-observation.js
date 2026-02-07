@@ -212,19 +212,16 @@ chrome.storage.sync.get({
 									}
 
 									// Add score badge if not already present
-									// Skip on upload page - native dropdown structure doesn't accommodate badges well
-									const isUploadPage = window.location.href.indexOf('/upload') > -1;
-									if (colorItems.enableCVPercentages && !isUploadPage && !div.querySelector('.cv-score-badge')) {
-										const badge = document.createElement('span');
-										badge.className = 'cv-score-badge';
-										badge.textContent = score.toFixed(1) + '%';
-										badge.style.cssText = 'font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #74ac00; color: white; flex-shrink: 0; position: absolute; right: 70px; top: 50%; transform: translateY(-50%);';
-
-										if (li) {
-											li.style.position = 'relative';
+									if (colorItems.enableCVPercentages && !div.querySelector('.cv-score-badge')) {
+										// Find the .title element to insert badge after taxon name
+										const titleEl = div.querySelector('.title');
+										if (titleEl) {
+											const badge = document.createElement('span');
+											badge.className = 'cv-score-badge';
+											badge.textContent = score.toFixed(1) + '%';
+											badge.style.cssText = 'font-size: 10px; font-weight: 600; padding: 1px 6px; margin-left: 6px; border-radius: 8px; background: #74ac00; color: white; vertical-align: middle;';
+											titleEl.appendChild(badge);
 										}
-
-										div.appendChild(badge);
 									}
 								});
 							}
