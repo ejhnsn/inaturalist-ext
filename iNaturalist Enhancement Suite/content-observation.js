@@ -49,8 +49,8 @@ chrome.storage.sync.get({
 	if (items.enableCopyGeo) {
 		document.arrive('.MapDetails > .top_info', async div => {
 			let lat, long;
-			for (var child of div.children) {
-				var attr = child.querySelector('.attr');
+			for (const child of div.children) {
+				const attr = child.querySelector('.attr');
 				if (attr) {
 					if (attr.innerHTML.startsWith('Lat')) {
 						lat = child.querySelector('.value').innerHTML;

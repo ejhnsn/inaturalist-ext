@@ -20,10 +20,10 @@ FileReader.prototype.readAsDataURL = function(file) {
 }
 
 // override Image.src setter to parse and store the filename from the data URL
-var srcDescriptor = Object.getOwnPropertyDescriptor(Image.prototype, 'src');
+const srcDescriptor = Object.getOwnPropertyDescriptor(Image.prototype, 'src');
 Image.prototype.originalSrcSetter = srcDescriptor.set;
 
-var newSetter = function(value) {
+const newSetter = function(value) {
 	const match = value.match(/;name=([^;]+);/);
 	if (match) {
 		this._filename = match[1];
@@ -37,8 +37,8 @@ Object.defineProperty(Image.prototype, 'src', srcDescriptor);
 
 // override CanvasRenderingContext2D.drawImage to propagate image filename to canvas
 CanvasRenderingContext2D.prototype.drawImageOriginal = CanvasRenderingContext2D.prototype.drawImage;
-CanvasRenderingContext2D.prototype.drawImage = function() { 
-	var image = arguments[0];
+CanvasRenderingContext2D.prototype.drawImage = function() {
+	const image = arguments[0];
 	if (image) {
 		this.canvas._filename = image._filename;
 	}
@@ -49,9 +49,9 @@ CanvasRenderingContext2D.prototype.drawImage = function() {
 
 // override HTMLCanvasElement.toBlob to create file with filename
 HTMLCanvasElement.prototype.toBlobOriginal = HTMLCanvasElement.prototype.toBlob;
-HTMLCanvasElement.prototype.toBlob = function() {   
-	const filename = this._filename;  
-	var originalCallback = arguments[0];
+HTMLCanvasElement.prototype.toBlob = function() {
+	const filename = this._filename;
+	const originalCallback = arguments[0];
 	arguments[0] = function(blob) {
 		originalCallback(new File([blob], filename));
 	}
