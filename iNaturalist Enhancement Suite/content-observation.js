@@ -216,13 +216,14 @@ chrome.storage.sync.get({
 										const badge = document.createElement('span');
 										badge.className = 'cv-score-badge';
 										badge.textContent = score.toFixed(1) + '%';
-										badge.style.cssText = 'font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #74ac00; color: white; flex-shrink: 0; position: absolute; right: 70px; top: 50%; transform: translateY(-50%);';
-
-										if (li) {
-											li.style.position = 'relative';
-										}
+										badge.style.cssText = 'font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #74ac00; color: white; flex-shrink: 0; margin-left: auto; margin-right: 4px; white-space: nowrap;';
 
 										div.appendChild(badge);
+									}
+
+									// Ensure row doesn't overflow
+									if (li) {
+										li.style.overflow = 'hidden';
 									}
 								});
 							}
