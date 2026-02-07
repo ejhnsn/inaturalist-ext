@@ -213,14 +213,28 @@ chrome.storage.sync.get({
 
 									// Add score badge if not already present
 									if (colorItems.enableCVPercentages && !div.querySelector('.cv-score-badge')) {
-										// Find the .title element to insert badge after taxon name
-										const titleEl = div.querySelector('.title');
-										if (titleEl) {
-											const badge = document.createElement('span');
-											badge.className = 'cv-score-badge';
-											badge.textContent = score.toFixed(1) + '%';
-											badge.style.cssText = 'font-size: 10px; font-weight: 600; padding: 1px 6px; margin-left: 6px; border-radius: 8px; background: #74ac00; color: white; vertical-align: middle;';
-											titleEl.appendChild(badge);
+										const badge = document.createElement('span');
+										badge.className = 'cv-score-badge';
+										badge.textContent = score.toFixed(1) + '%';
+										badge.style.cssText = 'font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #74ac00; color: white; flex-shrink: 0; margin-left: auto; margin-right: 8px;';
+
+										// Find View link by looking for anchor with "View" text
+										const links = div.querySelectorAll('a');
+										let viewLink = null;
+										for (const link of links) {
+											if (link.textContent.trim() === 'View') {
+												viewLink = link;
+												break;
+											}
+										}
+
+										div.style.display = 'flex';
+										div.style.alignItems = 'center';
+
+										if (viewLink) {
+											div.insertBefore(badge, viewLink);
+										} else {
+											div.appendChild(badge);
 										}
 									}
 								});
