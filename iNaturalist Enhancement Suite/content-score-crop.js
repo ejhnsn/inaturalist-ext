@@ -461,8 +461,7 @@ chrome.storage.sync.get({
 	let cropper = null;
 	let cvResultsCache = null; // Cache for CV results, invalidated on crop change
 	let modalInitialized = false;
-	let scoreResultsCache = null;
-	let lastScoredImageUrl = null;
+	const scoreResultsCache = new Map(); // Cache CV results by image URL
 	let scoreResultsVisible = false;
 
 	// Ensure modal exists and event listeners are set up
@@ -676,11 +675,11 @@ chrome.storage.sync.get({
 		scoreResultsPanel.classList.add('visible');
 		scoreResultsVisible = true;
 
-		// Check cache - only use if same image
-		if (scoreResultsCache && lastScoredImageUrl === imageUrl) {
-			log('Using cached score results');
+		// Check cache for this image URL
+		if (scoreResultsCache.has(imageUrl)) {
+			log('Using cached score results for', imageUrl);
 			loadingEl.style.display = 'none';
-			displayCVResults(scoreResultsCache, resultsList, closeScoreResults);
+			displayCVResults(scoreResultsCache.get(imageUrl), resultsList, closeScoreResults);
 			return;
 		}
 
@@ -700,9 +699,8 @@ chrome.storage.sync.get({
 			const data = await callScoreImageAPI(imageDataUrl, metadata);
 			log('Score results:', data);
 
-			// Cache the results
-			scoreResultsCache = data;
-			lastScoredImageUrl = imageUrl;
+			// Cache the results by image URL
+			scoreResultsCache.set(imageUrl, data);
 
 			loadingEl.style.display = 'none';
 			displayCVResults(data, resultsList, closeScoreResults);
