@@ -1208,24 +1208,33 @@ chrome.storage.sync.get({
 	}
 
 	// Prefetch all gallery images in order
-	let prefetchStarted = false;
+	let prefetchInProgress = false;
 	function prefetchGalleryImages() {
-		if (prefetchStarted) return;
-		prefetchStarted = true;
+		// Skip if already prefetching, but allow new prefetch calls after completion
+		if (prefetchInProgress) return;
 
 		const urls = getGalleryImageUrls();
-		log(`Prefetching ${urls.length} gallery images`);
+		// Filter to only URLs not already cached
+		const urlsToFetch = urls.filter(url => !imageCache.has(url));
+
+		if (urlsToFetch.length === 0) {
+			log('All gallery images already cached');
+			return;
+		}
+
+		prefetchInProgress = true;
+		log(`Prefetching ${urlsToFetch.length} gallery images`);
 
 		// Fetch sequentially to avoid overwhelming the network
-		urls.reduce((chain, url) => {
+		urlsToFetch.reduce((chain, url) => {
 			return chain.then(() => {
-				if (!imageCache.has(url)) {
-					return fetchImageViaBackground(url).catch(err => {
-						logWarn('Failed to prefetch:', url, err);
-					});
-				}
+				return fetchImageViaBackground(url).catch(err => {
+					logWarn('Failed to prefetch:', url, err);
+				});
 			});
-		}, Promise.resolve());
+		}, Promise.resolve()).finally(() => {
+			prefetchInProgress = false;
+		});
 	}
 
 	// Check if user is logged in by looking for API token
@@ -1352,11 +1361,13 @@ chrome.storage.sync.get({
 			return;
 		}
 
-		// Close modals on arrow key navigation (stale results)
+		// Close modals on arrow key navigation and prefetch new images
 		document.addEventListener('keydown', (e) => {
 			if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
 				closeScoreResults();
 				closeCropModal();
+				// Prefetch new observation's images after a short delay
+				setTimeout(() => prefetchGalleryImages(), 500);
 			}
 		});
 
