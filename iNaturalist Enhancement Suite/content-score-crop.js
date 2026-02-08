@@ -482,16 +482,20 @@ chrome.storage.sync.get({
 				modal.querySelector('.inat-crop-results').classList.remove('visible');
 			});
 
-			// Handle Escape key
+			// Handle Escape key - stop propagation to prevent closing parent modals
 			document.addEventListener('keydown', (e) => {
 				if (e.key === 'Escape') {
 					// First check standalone score results panel
 					if (scoreResultsVisible) {
+						e.stopPropagation();
+						e.preventDefault();
 						closeScoreResults();
 						return;
 					}
 					// Then check modal
 					if (modal.classList.contains('active')) {
+						e.stopPropagation();
+						e.preventDefault();
 						const resultsEl = modal.querySelector('.inat-crop-results');
 						if (resultsEl.classList.contains('visible')) {
 							resultsEl.classList.remove('visible');
@@ -500,7 +504,7 @@ chrome.storage.sync.get({
 						}
 					}
 				}
-			});
+			}, true); // Use capture phase to intercept before iNaturalist's handlers
 		}
 
 		return modal;
@@ -665,10 +669,23 @@ chrome.storage.sync.get({
 		const loadingEl = scoreResultsPanel.querySelector('.inat-score-results-loading');
 		const resultsList = scoreResultsPanel.querySelector('.inat-crop-results-list');
 
-		// Position the panel just to the right of the image container
+		// Position the panel to the right of the image
 		const containerRect = buttonContainer.getBoundingClientRect();
 		scoreResultsPanel.style.top = '150px';
-		scoreResultsPanel.style.left = (containerRect.right + 20) + 'px';
+
+		// On identify page, position further right to avoid overlapping the image
+		if (isIdentifyPage()) {
+			// Find the left-col width to position panel at its right edge
+			const leftCol = document.querySelector('.left-col');
+			if (leftCol) {
+				const leftColRect = leftCol.getBoundingClientRect();
+				scoreResultsPanel.style.left = (leftColRect.right + 10) + 'px';
+			} else {
+				scoreResultsPanel.style.left = (containerRect.right + 100) + 'px';
+			}
+		} else {
+			scoreResultsPanel.style.left = (containerRect.right + 20) + 'px';
+		}
 		scoreResultsPanel.style.right = 'auto';
 
 		// Show the panel
@@ -717,20 +734,50 @@ chrome.storage.sync.get({
 		scoreResultsVisible = false;
 	}
 
+	// Detect if we're on the /identify page
+	function isIdentifyPage() {
+		return window.location.pathname.includes('/observations/identify');
+	}
+
 	// Apply selected taxon to the identification form via page context (has jQuery access)
 	function applyTaxonToForm(taxon) {
-		// Find and click the "Suggest an Identification" tab
-		const tabs = document.querySelectorAll('.nav-tabs a');
-		for (const tab of tabs) {
-			if (tab.textContent.includes('Suggest')) {
-				tab.click();
-				break;
+		if (isIdentifyPage()) {
+			// On /identify page, click the "Add ID" button to open the input
+			const addIdButton = document.querySelector('button:has(i.icon-identification)');
+			if (addIdButton) {
+				log('Clicking Add ID button');
+				log('Form before click:', document.querySelector('.IdentificationForm'));
+				addIdButton.click();
+				log('Form after click:', document.querySelector('.IdentificationForm'));
+			} else {
+				log('Add ID button not found');
+			}
+		} else {
+			// On observation page, find and click the "Suggest an Identification" tab
+			const tabs = document.querySelectorAll('.nav-tabs a');
+			for (const tab of tabs) {
+				if (tab.textContent.includes('Suggest')) {
+					tab.click();
+					break;
+				}
 			}
 		}
 
+		// Wait for UI to update (longer delay on /identify page for input to appear)
+		const delay = isIdentifyPage() ? 500 : 200;
+		log('Waiting', delay, 'ms for UI to update...');
 		setTimeout(() => {
-			// Scroll to the form
-			const container = document.querySelector('.TaxonAutocomplete');
+			log('After delay - looking for TaxonAutocomplete');
+			// On /identify page, target the IdentificationForm specifically (not the SearchBar)
+			const containerSelector = isIdentifyPage()
+				? '.IdentificationForm .TaxonAutocomplete'
+				: '.TaxonAutocomplete';
+			const container = document.querySelector(containerSelector);
+			log('Using selector:', containerSelector);
+			log('Found container:', container);
+			const input = container?.querySelector('input');
+			log('Found input:', input);
+			log('Input value:', input?.value);
 			if (container) {
 				container.scrollIntoView({ behavior: 'smooth', block: 'center' });
 			}
@@ -752,9 +799,9 @@ chrome.storage.sync.get({
 			document.addEventListener('selectTaxonResponse', handleResponse);
 
 			document.dispatchEvent(new CustomEvent('selectTaxonRequest', {
-				detail: { taxon, requestId }
+				detail: { taxon, requestId, isIdentifyPage: isIdentifyPage() }
 			}));
-		}, 200);
+		}, delay);
 	}
 
 	function handleCrop() {
@@ -1189,26 +1236,38 @@ chrome.storage.sync.get({
 
 	// Create and add the crop button to a stable location
 	function addScoreAndCropButtons() {
-		// Don't add if already exists
-		if (document.querySelector('.inat-crop-trigger-container')) return;
-
 		// Inject styles first
 		injectButtonStyles();
 
-		// Find a stable container - the photo browser or gallery wrapper
-		const targetSelectors = [
-			'.image-gallery',                    // Image gallery wrapper
-			'.PhotoBrowser',                     // Photo browser
-			'.ObservationMedia'                  // Observation media section
-		];
-
-		let targetContainer = null;
-		for (const selector of targetSelectors) {
-			targetContainer = document.querySelector(selector);
-			if (targetContainer) break;
+		// Don't add if already exists
+		if (document.querySelector('.inat-crop-trigger-container')) {
+			return;
 		}
 
-		if (!targetContainer) {
+		// Find a stable container to add buttons to
+		// On identify page, use obs-media (stable) not photos-wrapper (replaced on navigation)
+		let targetContainer = null;
+		let insertAfterElement = null;
+
+		const obsMedia = document.querySelector('.obs-media');
+		if (obsMedia) {
+			// Identify modal - add to obs-media after photos-wrapper
+			targetContainer = obsMedia;
+			insertAfterElement = obsMedia.querySelector('.photos-wrapper');
+		} else {
+			// Regular observation page - add after image-gallery
+			const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
+			for (const selector of selectors) {
+				targetContainer = document.querySelector(selector);
+				if (targetContainer) {
+					insertAfterElement = targetContainer;
+					targetContainer = targetContainer.parentNode;
+					break;
+				}
+			}
+		}
+
+		if (!targetContainer || !insertAfterElement) {
 			log('No suitable container found for Score/Crop buttons');
 			return;
 		}
@@ -1270,8 +1329,8 @@ chrome.storage.sync.get({
 		container.appendChild(scoreButton);
 		container.appendChild(cropButton);
 
-		// Insert after the target container
-		targetContainer.parentNode.insertBefore(container, targetContainer.nextSibling);
+		// Insert after the specified element within the target container
+		targetContainer.insertBefore(container, insertAfterElement.nextSibling);
 
 		// Close score results panel when clicking outside
 		document.addEventListener('click', (e) => {
@@ -1279,13 +1338,6 @@ chrome.storage.sync.get({
 				if (!scoreResultsPanel.contains(e.target) && !container.contains(e.target)) {
 					closeScoreResults();
 				}
-			}
-		});
-
-		// Close score results panel on Escape
-		document.addEventListener('keydown', (e) => {
-			if (e.key === 'Escape' && scoreResultsVisible) {
-				closeScoreResults();
 			}
 		});
 
@@ -1299,6 +1351,14 @@ chrome.storage.sync.get({
 			log('Score Image & Crop tools enabled but require login - buttons not shown');
 			return;
 		}
+
+		// Close modals on arrow key navigation (stale results)
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+				closeScoreResults();
+				closeCropModal();
+			}
+		});
 
 		// Wait for the gallery/photo elements to load, then add our button
 		const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];

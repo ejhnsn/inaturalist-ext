@@ -125,17 +125,128 @@ document.addEventListener('scoreImageRequest', async (event) => {
 
 // Listen for taxon selection requests from content script
 document.addEventListener('selectTaxonRequest', (event) => {
-	const { taxon, requestId } = event.detail;
+	const { taxon, requestId, isIdentifyPage } = event.detail;
 
 	try {
-		const container = document.querySelector('.TaxonAutocomplete');
-		const input = container?.querySelector('input.ui-autocomplete-input');
+		// On identify page, specifically target the IdentificationForm (not the SearchBar)
+		const containerSelectors = isIdentifyPage
+			? ['.IdentificationForm .TaxonAutocomplete']
+			: ['.TaxonAutocomplete'];
+
+		const inputSelectors = [
+			'input.ui-autocomplete-input',
+			'input[type="search"]',
+			'input'
+		];
+
+		let container = null;
+		let input = null;
+
+		// Try each container selector
+		for (const containerSel of containerSelectors) {
+			container = document.querySelector(containerSel);
+			console.log('[iNat Enhancement] Trying selector:', containerSel, 'found:', container);
+			if (container) {
+				// Try each input selector within this container
+				for (const inputSel of inputSelectors) {
+					input = container.querySelector(inputSel);
+					if (input) break;
+				}
+				if (input) break;
+			}
+		}
+
+		// Fallback if not found
+		if (!input && isIdentifyPage) {
+			const identifySelectors = [
+				'.IdentificationForm input[type="search"]',
+				'.IdentificationForm input'
+			];
+
+			for (const sel of identifySelectors) {
+				input = document.querySelector(sel);
+				if (input) {
+					container = input.closest('.TaxonAutocomplete') || input.parentElement;
+					break;
+				}
+			}
+		}
 
 		if (!container || !input) {
+			// If not found immediately on identify page, poll for it to appear
+			if (isIdentifyPage) {
+				console.log('[iNat Enhancement] Input not found immediately, polling...');
+				let pollAttempts = 0;
+				const maxPollAttempts = 20;
+				const pollInterval = setInterval(() => {
+					pollAttempts++;
+
+					// Re-try all the selectors
+					for (const containerSel of containerSelectors) {
+						container = document.querySelector(containerSel);
+						if (container) {
+							for (const inputSel of inputSelectors) {
+								input = container.querySelector(inputSel);
+								if (input) break;
+							}
+							if (input) break;
+						}
+					}
+
+					if (!input) {
+						const identifySelectors = [
+							'.ObservationModal .TaxonAutocomplete input',
+							'.SplitTaxonSelector input',
+							'.identification input[type="text"]',
+							'[class*="identification"] input[type="text"]'
+						];
+						for (const sel of identifySelectors) {
+							input = document.querySelector(sel);
+							if (input) {
+								container = input.closest('.TaxonAutocomplete') || input.parentElement;
+								break;
+							}
+						}
+					}
+
+					if (input) {
+						clearInterval(pollInterval);
+						console.log('[iNat Enhancement] Found input after polling:', input);
+						performAutocomplete(input, container, taxon, requestId);
+					} else if (pollAttempts >= maxPollAttempts) {
+						clearInterval(pollInterval);
+						console.error('[iNat Enhancement] Input not found after polling');
+						console.error('[iNat Enhancement] Available elements:', document.querySelectorAll('[class*="TaxonAutocomplete"], [class*="identification"]'));
+						document.dispatchEvent(new CustomEvent('selectTaxonResponse', {
+							detail: { requestId, success: false, error: 'Could not find autocomplete input after waiting' }
+						}));
+					}
+				}, 100);
+				return;
+			}
+
+			console.error('[iNat Enhancement] Container:', container, 'Input:', input);
+			console.error('[iNat Enhancement] Available TaxonAutocomplete elements:', document.querySelectorAll('[class*="TaxonAutocomplete"]'));
 			throw new Error('Could not find autocomplete input');
 		}
 
+		performAutocomplete(input, container, taxon, requestId);
+
+	} catch (error) {
+		console.error('[iNat Enhancement] selectTaxon error:', error);
+		document.dispatchEvent(new CustomEvent('selectTaxonResponse', {
+			detail: { requestId, success: false, error: error.message }
+		}));
+	}
+});
+
+// Extracted autocomplete logic for reuse
+function performAutocomplete(input, container, taxon, requestId) {
+	try {
 		const $input = $(input);
+
+		console.log('[iNat Enhancement] performAutocomplete called');
+		console.log('[iNat Enhancement] Input loading class:', input.classList.contains('ui-autocomplete-loading'));
 
 		// Ensure taxon has title property
 		if (!taxon.title) {
@@ -144,19 +255,65 @@ document.addEventListener('selectTaxonRequest', (event) => {
 				: taxon.name;
 		}
 
-		// Focus input and set its value to trigger autocomplete search
-		input.focus();
-		$input.val(taxon.name);
+		// Wait for any existing autocomplete loading to finish
+		function waitForReady() {
+			return new Promise(resolve => {
+				let checks = 0;
+				const checkReady = setInterval(() => {
+					checks++;
+					const isLoading = input.classList.contains('ui-autocomplete-loading');
+					if (!isLoading || checks > 20) {
+						clearInterval(checkReady);
+						console.log('[iNat Enhancement] Input ready after', checks, 'checks, loading:', isLoading);
+						resolve();
+					}
+				}, 50);
+			});
+		}
 
-		// Trigger the autocomplete search
-		$input.autocomplete('search', taxon.name);
+		waitForReady().then(() => {
+			// Focus input
+			input.focus();
+			input.click();
+			console.log('[iNat Enhancement] After focus, activeElement:', document.activeElement === input);
+
+			// Use native setter to bypass React
+			const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+			nativeSetter.call(input, taxon.name);
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			console.log('[iNat Enhancement] Set value via native setter:', input.value);
+
+			// Small delay then trigger search
+			setTimeout(() => {
+				console.log('[iNat Enhancement] Value before search:', input.value);
+				$input.autocomplete('search', taxon.name);
+				console.log('[iNat Enhancement] Triggered search for:', taxon.name);
+				startMenuPolling();
+			}, 100);
+		});
+
+		function startMenuPolling() {
 
 		// Wait for dropdown to appear, then click the matching result
 		let attempts = 0;
 		const maxAttempts = 30;
 		const checkInterval = setInterval(() => {
 			attempts++;
-			const menu = container.querySelector('.ui-autocomplete');
+			// Get the menu widget associated with this input (jQuery UI appends it to body)
+			let menu;
+			try {
+				menu = $input.autocomplete('widget')[0];
+			} catch (e) {
+				console.log('[iNat Enhancement] Error getting widget:', e.message);
+			}
+
+			if (attempts === 1 || attempts === 10 || attempts === 20) {
+				console.log('[iNat Enhancement] Attempt', attempts,
+					'- menu:', menu?.id,
+					'- children:', menu?.children.length,
+					'- display:', menu?.style.display,
+					'- input.value:', input.value);
+			}
 
 			if (menu && menu.children.length > 0 && menu.style.display !== 'none') {
 				clearInterval(checkInterval);
@@ -214,6 +371,7 @@ document.addEventListener('selectTaxonRequest', (event) => {
 				}));
 			}
 		}, 100);
+		} // end startMenuPolling
 
 	} catch (error) {
 		console.error('[iNat Enhancement] selectTaxon error:', error);
@@ -221,7 +379,7 @@ document.addEventListener('selectTaxonRequest', (event) => {
 			detail: { requestId, success: false, error: error.message }
 		}));
 	}
-});
+}
 
 const oldFetch = window.fetch;
 window.fetch = async (url, options) => {
