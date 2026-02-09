@@ -1,4 +1,12 @@
 // Background script for handling cross-origin image requests
+//
+// This is needed because static.inaturalist.org blocks CORS, so content scripts
+// can't fetch images directly. The background script has elevated permissions
+// via host_permissions in manifest.json to bypass this restriction.
+//
+// Note: Images on inaturalist-open-data.s3.amazonaws.com have permissive CORS
+// and could be fetched directly from content scripts, but we use the background
+// script for all image fetches for simplicity.
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	if (request.action === 'fetchImage') {
