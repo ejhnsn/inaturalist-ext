@@ -1,16 +1,18 @@
 chrome.storage.sync.get({
 	enableColorVision: true,
+	enableCVPercentages: true,
 	enableCopyGeo: true,
 	enableIdentifierStats: true,
 	enableLogging: false
 }, function(items) {
-	const LOGGING_ENABLED = items.enableLogging;
+	// Use shared logging from logging.js
+	const logDebug = window.iNatLogDebug || console.debug;
+	const log = window.iNatLog || console.log;
+
 	const DEFAULT_KEY_NAME = 'default';
 	const FLAG_CLASS = 'expanded';
 
-	if (LOGGING_ENABLED) {
-		console.debug(items);
-	}
+	logDebug('Settings loaded:', items);
 
 	if (items.enableIdentifierStats) {
 		document.arrive('.ActivityItem.identification', async div => {
@@ -47,8 +49,8 @@ chrome.storage.sync.get({
 	if (items.enableCopyGeo) {
 		document.arrive('.MapDetails > .top_info', async div => {
 			let lat, long;
-			for (var child of div.children) {
-				var attr = child.querySelector('.attr');
+			for (const child of div.children) {
+				const attr = child.querySelector('.attr');
 				if (attr) {
 					if (attr.innerHTML.startsWith('Lat')) {
 						lat = child.querySelector('.value').innerHTML;
@@ -74,9 +76,7 @@ chrome.storage.sync.get({
 	let computerVisionResults = new Map();
 
 	document.addEventListener('observationFetch', event => {
-		if (LOGGING_ENABLED) {
-			console.trace('observationFetch handler', event.detail);
-		}
+		log('observationFetch handler', event.detail);
 
 		if (items.enableCopyGeo) {
 			const detail = event.detail;
@@ -106,17 +106,13 @@ chrome.storage.sync.get({
 
 	// cache the CV response for a photo
 	document.addEventListener('computerVisionResponse', event => {
-		if (LOGGING_ENABLED) {
-			console.trace('computerVisionResponse handler', event.detail);
-		}
+		log('computerVisionResponse handler', event.detail);
 
-		if (items.enableColorVision) {
+		if (items.enableColorVision || items.enableCVPercentages) {
 			const detail = event.detail;
 			if (detail && detail.data) {
 				const key = detail.filename || DEFAULT_KEY_NAME;
-				if (LOGGING_ENABLED) {
-					console.debug('key', key);
-				}
+				logDebug('key', key);
 
 				computerVisionResults.set(key, detail.data);
 			}
@@ -151,17 +147,13 @@ chrome.storage.sync.get({
 							} while (parent.parentNode);
 						}
 
-						if (LOGGING_ENABLED) {
-							console.debug('parent', parent);
-						}
+						logDebug('parent', parent);
 
 						// img will be falsy here on the single-observation page
 						const img = parent.querySelector('img.img-thumbnail');
 						const key = img ? img.alt : DEFAULT_KEY_NAME;
 
-						if (LOGGING_ENABLED) {
-							console.debug('key', key);
-						}
+						logDebug('key', key);
 
 						const computerVision = computerVisionResults.get(key);
 						if (!computerVision) {
@@ -182,23 +174,68 @@ chrome.storage.sync.get({
 							if (score) {
 								let hue = score * 1.2;
 								chrome.storage.sync.get({
+									enableColorVision: true,
 									colorDisplayMode: 'sidebar',
-									enableColorBlindMode: false
-								}, function(items) {
-									if (items.enableColorBlindMode) {
+									enableColorBlindMode: false,
+									enableCVPercentages: true
+								}, function(colorItems) {
+									if (colorItems.enableColorBlindMode) {
 										hue = hue * -1 + 240;
 									}
 
-									if (items.colorDisplayMode === 'gradient') {
-										div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
-									} else {
-										const ul = div.parentNode.parentNode;
-										if (!ul.classList.contains(FLAG_CLASS)) {
-											ul.style.width = parseInt(ul.style.width) + 7 + 'px';
-											ul.classList.add(FLAG_CLASS);
+									const li = div.closest('li');
+
+									// Apply color coding if enabled
+									if (colorItems.enableColorVision) {
+										if (colorItems.colorDisplayMode === 'gradient') {
+											div.style.background = 'linear-gradient(to right, hsl(' + hue + ',50%,50%), white 90%)';
+										} else {
+											// Add rounded sidebar element instead of border-left
+											if (!li.querySelector('.cv-sidebar')) {
+												const ul = div.parentNode.parentNode;
+												if (!ul.classList.contains(FLAG_CLASS)) {
+													ul.style.width = parseInt(ul.style.width) + 18 + 'px';
+													ul.classList.add(FLAG_CLASS);
+												}
+
+												const sidebar = document.createElement('div');
+												sidebar.className = 'cv-sidebar';
+												sidebar.style.cssText = 'width: 6px; background: hsl(' + hue + ', 50%, 50%); border-radius: 3px; position: absolute; left: 4px; top: 4px; bottom: 4px;';
+
+												if (li) {
+													li.style.position = 'relative';
+													li.style.paddingLeft = '14px';
+													li.insertBefore(sidebar, li.firstChild);
+												}
+											}
+										}
+									}
+
+									// Add score badge if not already present
+									if (colorItems.enableCVPercentages && !div.querySelector('.cv-score-badge')) {
+										const badge = document.createElement('span');
+										badge.className = 'cv-score-badge';
+										badge.textContent = score.toFixed(1) + '%';
+										badge.style.cssText = 'font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #74ac00; color: white; flex-shrink: 0; margin-left: auto; margin-right: 8px;';
+
+										// Find View link by looking for anchor with "View" text
+										const links = div.querySelectorAll('a');
+										let viewLink = null;
+										for (const link of links) {
+											if (link.textContent.trim() === 'View') {
+												viewLink = link;
+												break;
+											}
 										}
 
-										div.style.borderLeft = '7px solid hsl(' + hue + ',50%,50%)';
+										div.style.display = 'flex';
+										div.style.alignItems = 'center';
+
+										if (viewLink) {
+											div.insertBefore(badge, viewLink);
+										} else {
+											div.appendChild(badge);
+										}
 									}
 								});
 							}

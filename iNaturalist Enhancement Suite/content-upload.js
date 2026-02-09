@@ -2,26 +2,25 @@ chrome.storage.sync.get({
 	enableCopyGeo: true,
 	enableLogging: false
 }, function(items) {
-	const LOGGING_ENABLED = items.enableLogging;
+	// Use shared logging from logging.js
+	const logDebug = window.iNatLogDebug || console.debug;
 
-	if (LOGGING_ENABLED) {
-		console.debug(items);
-	}
+	logDebug('Settings loaded:', items);
 
 	if (items.enableCopyGeo) {
 		document.arrive('div.GooglePlacesAutocomplete > input[type="text"]', input => {
-			input.addEventListener('paste', e => { 
-				var pasted = e.clipboardData.getData('Text');
-				var matches = pasted.match(/(\-?\d+\.\d+),\s*(\-?\d+\.\d+)/);
+			input.addEventListener('paste', e => {
+				const pasted = e.clipboardData.getData('Text');
+				const matches = pasted.match(/(\-?\d+\.\d+),\s*(\-?\d+\.\d+)/);
 				if (matches && matches.length === 3) {
-					var lat = matches[1];
-					var long = matches[2];
-					for (var label of document.querySelectorAll('.label-text')) {
+					const lat = matches[1];
+					const long = matches[2];
+					for (const label of document.querySelectorAll('.label-text')) {
 						if (label.innerHTML === 'Latitude' || label.innerHTML === 'Longitude') {
-							var input = label.parentNode.querySelector('input');
-							var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-							setter.call(input, label.innerHTML === 'Latitude' ? lat : long);
-							input.dispatchEvent(new Event('input', { bubbles: true }));
+							const labelInput = label.parentNode.querySelector('input');
+							const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+							setter.call(labelInput, label.innerHTML === 'Latitude' ? lat : long);
+							labelInput.dispatchEvent(new Event('input', { bubbles: true }));
 						}
 					}
 				}
