@@ -937,6 +937,38 @@ chrome.storage.sync.get({
 			return;
 		}
 
+		// Detect the user's name display preference from iNat's own rendered elements.
+		// iNat's SplitTaxon component puts `display-name` on whichever name is primary.
+		const splitTaxon = document.querySelector('.SplitTaxon');
+		const sciIsDisplay = !!splitTaxon?.querySelector('.sciname.display-name');
+		const hasCommon = !!splitTaxon?.querySelector('.comname');
+		// "scientific only" = sci is display-name and no common name element rendered
+		// "scientific first" = sci is display-name but common name is also shown
+		// "common first" = common name is display-name (default)
+		const nameStyle = sciIsDisplay
+			? (hasCommon ? 'scientific first' : 'scientific only')
+			: 'common first';
+		log('Name display preference:', nameStyle);
+
+		function formatTaxonName(commonName, scientificName, rankName) {
+			if (nameStyle === 'scientific only' || !commonName) {
+				return `
+					<div class="result-name"><em>${scientificName}</em></div>
+					<div class="result-rank">${rankName}</div>
+				`;
+			}
+			if (nameStyle === 'scientific first') {
+				return `
+					<div class="result-name"><em>${scientificName}</em></div>
+					<div class="result-rank">${commonName}</div>
+				`;
+			}
+			return `
+				<div class="result-name">${commonName}</div>
+				<div class="result-rank"><em>${scientificName}</em></div>
+			`;
+		}
+
 		// Build the HTML
 		let html = '';
 
@@ -955,8 +987,7 @@ chrome.storage.sync.get({
 					<div class="result-border" style="background: #74ac00;"></div>
 					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : '<div class="result-photo"></div>'}
 					<div class="result-info">
-						<div class="result-name">${commonName || scientificName}</div>
-						<div class="result-rank">${rankName} <em>${scientificName}</em></div>
+						${formatTaxonName(commonName, scientificName, rankName)}
 					</div>
 					${ancestorScore ? `<span class="result-score">${ancestorScore.toFixed(1)}%</span>` : ''}
 					<a class="view-link" href="https://www.inaturalist.org/taxa/${ancestor.id}" target="_blank" onclick="event.stopPropagation();">View</a>
@@ -987,28 +1018,12 @@ chrome.storage.sync.get({
 			// Calculate color based on score
 			const hue = score * 1.2;
 
-			// Display format depends on whether there's a common name:
-			// - With common name: common name on top, scientific name (italic) below
-			// - Without common name: scientific name on top, rank below
-			let nameHtml;
-			if (commonName) {
-				nameHtml = `
-					<div class="result-name">${commonName}</div>
-					<div class="result-rank"><em>${scientificName}</em></div>
-				`;
-			} else {
-				nameHtml = `
-					<div class="result-name">${scientificName}</div>
-					<div class="result-rank">${rankName}</div>
-				`;
-			}
-
 			return `
 				<li class="result-item" data-score="${score}" data-taxon-id="${taxon.id}">
 					<div class="result-border" style="background: hsl(${hue}, 50%, 50%);"></div>
 					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : '<div class="result-photo"></div>'}
 					<div class="result-info">
-						${nameHtml}
+						${formatTaxonName(commonName, scientificName, rankName)}
 						${tagsHtml}
 					</div>
 					<span class="result-score">${score.toFixed(1)}%</span>
@@ -1473,12 +1488,25 @@ chrome.storage.sync.get({
 		// update their enabled/disabled state (handles sound-only observations too).
 		document.arrive('.obs-media', { existing: true }, function() {
 			const obsMedia = this;
+			let repositioning = false;
+
 			addScoreAndCropButtons();
 
-			new MutationObserver(() => {
+			new MutationObserver((mutations) => {
+				if (repositioning) return;
+				// Ignore mutations caused by our own button container
+				const isOwnMutation = mutations.every(m =>
+					[...m.addedNodes, ...m.removedNodes].every(n =>
+						n === buttonContainer
+					)
+				);
+				if (isOwnMutation) return;
+
+				repositioning = true;
 				setTimeout(() => {
 					addScoreAndCropButtons();
 					prefetchGalleryImages();
+					repositioning = false;
 				}, 100);
 			}).observe(obsMedia, { childList: true });
 		});
