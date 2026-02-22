@@ -5,6 +5,7 @@ function saveOptions() {
     const enableCVPercentages = document.getElementById('cv-percentages').checked;
     const enableScoreImageTools = document.getElementById('score-image-tools').checked;
     const scoreImagePosition = document.querySelector('input[name="score-image-position"]:checked').value;
+    const scoreImageColor = document.querySelector('input[name="score-image-color"]:checked').value;
     const enableCount = document.getElementById('your-observations-count').checked;
     const enableCopyGeo = document.getElementById('copy-geocoordinates').checked;
     const enableIdentifierStats = document.getElementById('identifier-stats').checked;
@@ -16,6 +17,7 @@ function saveOptions() {
         enableCVPercentages,
         enableScoreImageTools,
         scoreImagePosition,
+        scoreImageColor,
         enableCount,
         enableCopyGeo,
         enableIdentifierStats,
@@ -37,6 +39,7 @@ function restoreOptions() {
         enableCVPercentages: true,
         enableScoreImageTools: true,
         scoreImagePosition: 'below',
+        scoreImageColor: 'outlined',
         enableCount: true,
         enableCopyGeo: true,
         enableIdentifierStats: true,
@@ -48,6 +51,7 @@ function restoreOptions() {
         document.getElementById('cv-percentages').checked = items.enableCVPercentages;
         document.getElementById('score-image-tools').checked = items.enableScoreImageTools;
         document.getElementById('position-' + items.scoreImagePosition).checked = true;
+        document.getElementById('color-' + items.scoreImageColor).checked = true;
         document.getElementById('enable-logging').checked = items.enableLogging;
         document.getElementById('your-observations-count').checked = items.enableCount;
         document.getElementById('copy-geocoordinates').checked = items.enableCopyGeo;

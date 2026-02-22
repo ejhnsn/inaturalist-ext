@@ -3,13 +3,15 @@
 
 chrome.storage.sync.get({
 	enableScoreImageTools: true,
-	scoreImagePosition: 'below'
+	scoreImagePosition: 'below',
+	scoreImageColor: 'outlined'
 }, function(items) {
 	if (!items.enableScoreImageTools) {
 		return;
 	}
 
 	const buttonPosition = items.scoreImagePosition;
+	const buttonColor = items.scoreImageColor;
 
 	// Use shared logging from logging.js
 	const log = window.iNatLog || console.log;
@@ -44,9 +46,6 @@ chrome.storage.sync.get({
 				position: relative;
 			}
 			.inat-crop-trigger {
-				background: #74ac00;
-				color: white;
-				border: none;
 				padding: 8px 16px;
 				border-radius: 4px;
 				font-size: 13px;
@@ -55,16 +54,32 @@ chrome.storage.sync.get({
 				display: inline-flex;
 				align-items: center;
 				gap: 6px;
-				transition: background 0.2s;
-			}
-			.inat-crop-trigger:hover:not(:disabled) {
-				background: #5a8a00;
+				transition: background 0.2s, border-color 0.2s;
 			}
 			.inat-crop-trigger:disabled {
-				background: #b0b0b0;
 				cursor: default;
-				opacity: 0.6;
+				opacity: 0.5;
 			}
+			.inat-crop-trigger.inat-btn-grey {
+				background: #555; color: white; border: none;
+			}
+			.inat-crop-trigger.inat-btn-grey:hover:not(:disabled) { background: #3a3a3a; }
+			.inat-crop-trigger.inat-btn-grey:disabled { background: #999; }
+			.inat-crop-trigger.inat-btn-blue {
+				background: #4a7298; color: white; border: none;
+			}
+			.inat-crop-trigger.inat-btn-blue:hover:not(:disabled) { background: #385a78; }
+			.inat-crop-trigger.inat-btn-blue:disabled { background: #8aa8c0; }
+			.inat-crop-trigger.inat-btn-green {
+				background: #74ac00; color: white; border: none;
+			}
+			.inat-crop-trigger.inat-btn-green:hover:not(:disabled) { background: #5a8a00; }
+			.inat-crop-trigger.inat-btn-green:disabled { background: #a3c964; }
+			.inat-crop-trigger.inat-btn-outlined {
+				background: #fff; color: #333; border: 1px solid #999;
+			}
+			.inat-crop-trigger.inat-btn-outlined:hover:not(:disabled) { background: #f0f0f0; border-color: #666; }
+			.inat-crop-trigger.inat-btn-outlined:disabled { background: #f5f5f5; color: #999; border-color: #ccc; }
 			.inat-crop-trigger svg {
 				width: 16px;
 				height: 16px;
@@ -1297,8 +1312,10 @@ chrome.storage.sync.get({
 		buttonContainer = document.createElement('div');
 		buttonContainer.className = 'inat-crop-trigger-container';
 
+		const colorClass = `inat-btn-${buttonColor}`;
+
 		scoreButton = document.createElement('button');
-		scoreButton.className = 'inat-crop-trigger';
+		scoreButton.className = `inat-crop-trigger ${colorClass}`;
 		scoreButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 				<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -1317,7 +1334,7 @@ chrome.storage.sync.get({
 		});
 
 		cropButton = document.createElement('button');
-		cropButton.className = 'inat-crop-trigger';
+		cropButton.className = `inat-crop-trigger ${colorClass}`;
 		cropButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 				<path d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/>
