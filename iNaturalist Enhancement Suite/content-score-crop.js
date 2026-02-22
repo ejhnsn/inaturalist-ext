@@ -484,6 +484,16 @@ chrome.storage.sync.get({
 	const scoreResultsCache = new Map(); // Cache CV results by image URL
 	let scoreResultsVisible = false;
 
+	// Capture observation location from API responses. domContext.js intercepts
+	// iNaturalist's fetch calls and dispatches observationFetch with the location
+	// string ("lat,lng"). This fires reliably on both observation and identify pages,
+	// before MapDetails renders.
+	let lastObservationLocation = null;
+	document.addEventListener('observationFetch', (event) => {
+		lastObservationLocation = event.detail?.location || null;
+		log('Observation location updated:', lastObservationLocation);
+	});
+
 	// Ensure modal exists and event listeners are set up
 	function ensureModalExists() {
 		if (!modal) {
@@ -1093,24 +1103,17 @@ chrome.storage.sync.get({
 			observed_on: null
 		};
 
-		// Try to get coordinates from the map details
-		const latEl = document.querySelector('.MapDetails .lat_lng .lat');
-		const lngEl = document.querySelector('.MapDetails .lat_lng .lng');
-		if (latEl && lngEl) {
-			metadata.lat = latEl.textContent.trim();
-			metadata.lng = lngEl.textContent.trim();
-		}
-
-		// Fallback: try to parse from the location string in the details
-		if (!metadata.lat) {
-			const locationValue = document.querySelector('.MapDetails .value');
-			if (locationValue) {
-				const match = locationValue.textContent.match(/([-\d.]+),\s*([-\d.]+)/);
-				if (match) {
-					metadata.lat = match[1];
-					metadata.lng = match[2];
-				}
+		// Use location from the most recent observationFetch event (fired by domContext.js
+		// when iNaturalist fetches observation data). Format is "lat,lng".
+		if (lastObservationLocation) {
+			const match = lastObservationLocation.match(/([-\d.]+),\s*([-\d.]+)/);
+			if (match) {
+				metadata.lat = match[1];
+				metadata.lng = match[2];
+				log('getObservationMetadata: coordinates from API:', metadata.lat, metadata.lng);
 			}
+		} else {
+			logWarn('getObservationMetadata: no observation location available');
 		}
 
 		// Try to get the observation date from time element's datetime attribute
