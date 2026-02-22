@@ -42,8 +42,12 @@ chrome.storage.sync.get({
 				display: flex;
 				justify-content: center;
 				gap: 8px;
-				padding: 8px 0;
+				padding: 4px 0;
 				position: relative;
+			}
+			.inat-crop-trigger-container + .image-gallery {
+				padding-top: 0 !important;
+				padding-bottom: 20px !important;
 			}
 			.inat-crop-trigger {
 				padding: 8px 16px;
