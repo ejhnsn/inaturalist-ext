@@ -54,8 +54,13 @@ chrome.storage.sync.get({
 				gap: 6px;
 				transition: background 0.2s;
 			}
-			.inat-crop-trigger:hover {
+			.inat-crop-trigger:hover:not(:disabled) {
 				background: #5a8a00;
+			}
+			.inat-crop-trigger:disabled {
+				background: #b0b0b0;
+				cursor: default;
+				opacity: 0.6;
 			}
 			.inat-crop-trigger svg {
 				width: 16px;
@@ -1278,50 +1283,18 @@ chrome.storage.sync.get({
 		return metaToken && metaToken.content;
 	}
 
-	// Create and add the crop button to a stable location
-	function addScoreAndCropButtons() {
-		// Inject styles first
-		injectButtonStyles();
+	// Create the button container and buttons (once)
+	let buttonContainer = null;
+	let scoreButton = null;
+	let cropButton = null;
 
-		// Don't add if already exists
-		if (document.querySelector('.inat-crop-trigger-container')) {
-			return;
-		}
+	function createButtons() {
+		if (buttonContainer) return buttonContainer;
 
-		// Find a stable container to add buttons to
-		// On identify page, use obs-media (stable) not photos-wrapper (replaced on navigation)
-		let targetContainer = null;
-		let insertAfterElement = null;
+		buttonContainer = document.createElement('div');
+		buttonContainer.className = 'inat-crop-trigger-container';
 
-		const obsMedia = document.querySelector('.obs-media');
-		if (obsMedia) {
-			// Identify modal - add to obs-media after photos-wrapper
-			targetContainer = obsMedia;
-			insertAfterElement = obsMedia.querySelector('.photos-wrapper');
-		} else {
-			// Regular observation page - add after image-gallery
-			const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
-			for (const selector of selectors) {
-				targetContainer = document.querySelector(selector);
-				if (targetContainer) {
-					insertAfterElement = targetContainer;
-					targetContainer = targetContainer.parentNode;
-					break;
-				}
-			}
-		}
-
-		if (!targetContainer || !insertAfterElement) {
-			log('No suitable container found for Score/Crop buttons');
-			return;
-		}
-
-		// Create button container
-		const container = document.createElement('div');
-		container.className = 'inat-crop-trigger-container';
-
-		// Score Image button (left)
-		const scoreButton = document.createElement('button');
+		scoreButton = document.createElement('button');
 		scoreButton.className = 'inat-crop-trigger';
 		scoreButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1329,22 +1302,18 @@ chrome.storage.sync.get({
 			</svg>
 			Score Image
 		`;
-
 		scoreButton.addEventListener('click', function(e) {
 			e.preventDefault();
 			e.stopPropagation();
-
 			const imageUrl = getCurrentPhotoUrl();
 			if (!imageUrl) {
 				alert('Could not find photo to score');
 				return;
 			}
-
-			scoreCurrentImage(imageUrl, container);
+			scoreCurrentImage(imageUrl, buttonContainer);
 		});
 
-		// Crop button (right)
-		const cropButton = document.createElement('button');
+		cropButton = document.createElement('button');
 		cropButton.className = 'inat-crop-trigger';
 		cropButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -1352,40 +1321,89 @@ chrome.storage.sync.get({
 			</svg>
 			Crop for CV
 		`;
-
 		cropButton.addEventListener('click', function(e) {
 			e.preventDefault();
 			e.stopPropagation();
-
 			const imageUrl = getCurrentPhotoUrl();
 			if (!imageUrl) {
 				alert('Could not find photo to crop');
 				return;
 			}
-
-			// Close score results if open
 			closeScoreResults();
-
 			loadCropperCSS();
 			openCropModal(imageUrl);
 		});
 
-		container.appendChild(scoreButton);
-		container.appendChild(cropButton);
-
-		// Insert after the specified element within the target container
-		targetContainer.insertBefore(container, insertAfterElement.nextSibling);
+		buttonContainer.appendChild(scoreButton);
+		buttonContainer.appendChild(cropButton);
 
 		// Close score results panel when clicking outside
 		document.addEventListener('click', (e) => {
 			if (scoreResultsVisible && scoreResultsPanel) {
-				if (!scoreResultsPanel.contains(e.target) && !container.contains(e.target)) {
+				if (!scoreResultsPanel.contains(e.target) && !buttonContainer.contains(e.target)) {
 					closeScoreResults();
 				}
 			}
 		});
 
-		log('Score and Crop buttons added');
+		return buttonContainer;
+	}
+
+	// Check whether the current slide is a sound and disable/enable buttons accordingly.
+	// Sound-only observations have no image slides at all; mixed observations may have
+	// the sound slide currently selected.
+	function updateButtonState() {
+		if (!scoreButton || !cropButton) return;
+
+		const hasImages = !!getCurrentPhotoUrl();
+		const centerSlide = document.querySelector('.image-gallery-slide.center');
+		const isSoundSlide = centerSlide && !!centerSlide.querySelector('.sound-container');
+		const shouldDisable = !hasImages || isSoundSlide;
+
+		scoreButton.disabled = shouldDisable;
+		cropButton.disabled = shouldDisable;
+	}
+
+	// Place buttons in the DOM and ensure correct position
+	function addScoreAndCropButtons() {
+		injectButtonStyles();
+		const container = createButtons();
+
+		const obsMedia = document.querySelector('.obs-media');
+		if (obsMedia) {
+			// Identify page: insert after .photos-wrapper (or .sounds if no photos-wrapper)
+			const photosWrapper = obsMedia.querySelector('.photos-wrapper');
+			const sounds = obsMedia.querySelector('.sounds');
+			const insertAfter = photosWrapper || sounds;
+			if (insertAfter) {
+				insertAfter.after(container);
+			} else {
+				obsMedia.prepend(container);
+			}
+		} else {
+			// Observation page: insert after the gallery element
+			if (container.parentNode) return; // already placed
+			const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
+			for (const selector of selectors) {
+				const gallery = document.querySelector(selector);
+				if (gallery) {
+					gallery.after(container);
+					break;
+				}
+			}
+		}
+
+		updateButtonState();
+
+		// Watch for slide changes (mixed image+audio) to toggle disabled state
+		const slidesContainer = document.querySelector('.image-gallery-slides');
+		if (slidesContainer && !slidesContainer._inatObserved) {
+			slidesContainer._inatObserved = true;
+			new MutationObserver(updateButtonState)
+				.observe(slidesContainer, { attributes: true, subtree: true, attributeFilter: ['class'] });
+		}
+
+		log('Score and Crop buttons positioned');
 	}
 
 	// Watch for the photo gallery to appear
@@ -1406,18 +1424,31 @@ chrome.storage.sync.get({
 			}
 		});
 
-		// Wait for the gallery/photo elements to load, then add our button
+		// Wait for the gallery/photo elements to load, then add our buttons
 		const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
-
 		for (const selector of selectors) {
 			document.arrive(selector, { existing: true }, function() {
-				// Small delay to ensure the gallery is fully rendered
 				setTimeout(() => {
 					addScoreAndCropButtons();
 					prefetchGalleryImages();
 				}, 100);
 			});
 		}
+
+		// On the identify page, .obs-media is stable but its children get rebuilt on
+		// observation navigation. Watch for child changes to reposition buttons and
+		// update their enabled/disabled state (handles sound-only observations too).
+		document.arrive('.obs-media', { existing: true }, function() {
+			const obsMedia = this;
+			addScoreAndCropButtons();
+
+			new MutationObserver(() => {
+				setTimeout(() => {
+					addScoreAndCropButtons();
+					prefetchGalleryImages();
+				}, 100);
+			}).observe(obsMedia, { childList: true });
+		});
 
 		log('Score Image & Crop initialized');
 	}
