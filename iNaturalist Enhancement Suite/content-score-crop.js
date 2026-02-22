@@ -219,6 +219,10 @@ chrome.storage.sync.get({
 				<div class="inat-crop-container">
 					<div class="inat-crop-header">
 						<h3>Crop Image for Computer Vision</h3>
+						<div class="inat-crop-toolbar">
+							<button class="inat-crop-btn inat-crop-rotate-left" title="Rotate left">&#x21BA;</button>
+							<button class="inat-crop-btn inat-crop-rotate-right" title="Rotate right">&#x21BB;</button>
+						</div>
 						<button class="inat-crop-close">&times;</button>
 					</div>
 					<div class="inat-crop-body">
@@ -367,6 +371,22 @@ chrome.storage.sync.get({
 				color: #666;
 				margin-bottom: 12px;
 			}
+			.inat-crop-toolbar {
+				display: flex;
+				gap: 4px;
+				margin-left: auto;
+				margin-right: 12px;
+			}
+			.inat-crop-btn.inat-crop-rotate-left,
+			.inat-crop-btn.inat-crop-rotate-right {
+				width: 32px;
+				height: 32px;
+				padding: 0;
+				font-size: 18px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
 			.inat-crop-buttons {
 				display: flex;
 				justify-content: flex-end;
@@ -478,6 +498,18 @@ chrome.storage.sync.get({
 			modal.querySelector('.inat-crop-cancel').addEventListener('click', closeCropModal);
 			modal.querySelector('.inat-crop-overlay').addEventListener('click', closeCropModal);
 			modal.querySelector('.inat-crop-submit').addEventListener('click', handleCrop);
+			modal.querySelector('.inat-crop-rotate-left').addEventListener('click', () => {
+				if (cropper) {
+					cropper.rotate(-90);
+					cvResultsCache = null;
+				}
+			});
+			modal.querySelector('.inat-crop-rotate-right').addEventListener('click', () => {
+				if (cropper) {
+					cropper.rotate(90);
+					cvResultsCache = null;
+				}
+			});
 			modal.querySelector('.inat-crop-results-close').addEventListener('click', () => {
 				modal.querySelector('.inat-crop-results').classList.remove('visible');
 			});
