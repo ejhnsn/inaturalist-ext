@@ -2,11 +2,14 @@
 // Adds buttons to observation photos for getting computer vision suggestions
 
 chrome.storage.sync.get({
-	enableScoreImageTools: true
+	enableScoreImageTools: true,
+	scoreImagePosition: 'below'
 }, function(items) {
 	if (!items.enableScoreImageTools) {
 		return;
 	}
+
+	const buttonPosition = items.scoreImagePosition;
 
 	// Use shared logging from logging.js
 	const log = window.iNatLog || console.log;
@@ -1371,23 +1374,36 @@ chrome.storage.sync.get({
 
 		const obsMedia = document.querySelector('.obs-media');
 		if (obsMedia) {
-			// Identify page: insert after .photos-wrapper (or .sounds if no photos-wrapper)
+			// Identify page
 			const photosWrapper = obsMedia.querySelector('.photos-wrapper');
 			const sounds = obsMedia.querySelector('.sounds');
-			const insertAfter = photosWrapper || sounds;
-			if (insertAfter) {
-				insertAfter.after(container);
+			if (buttonPosition === 'above') {
+				const target = photosWrapper || sounds;
+				if (target) {
+					target.before(container);
+				} else {
+					obsMedia.prepend(container);
+				}
 			} else {
-				obsMedia.prepend(container);
+				const insertAfter = photosWrapper || sounds;
+				if (insertAfter) {
+					insertAfter.after(container);
+				} else {
+					obsMedia.prepend(container);
+				}
 			}
 		} else {
-			// Observation page: insert after the gallery element
+			// Observation page
 			if (container.parentNode) return; // already placed
 			const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
 			for (const selector of selectors) {
 				const gallery = document.querySelector(selector);
 				if (gallery) {
-					gallery.after(container);
+					if (buttonPosition === 'above') {
+						gallery.before(container);
+					} else {
+						gallery.after(container);
+					}
 					break;
 				}
 			}
