@@ -60,26 +60,6 @@ chrome.storage.sync.get({
 				cursor: default;
 				opacity: 0.5;
 			}
-			.inat-crop-trigger.inat-btn-grey {
-				background: #555; color: white; border: none;
-			}
-			.inat-crop-trigger.inat-btn-grey:hover:not(:disabled) { background: #3a3a3a; }
-			.inat-crop-trigger.inat-btn-grey:disabled { background: #999; }
-			.inat-crop-trigger.inat-btn-blue {
-				background: #4a7298; color: white; border: none;
-			}
-			.inat-crop-trigger.inat-btn-blue:hover:not(:disabled) { background: #385a78; }
-			.inat-crop-trigger.inat-btn-blue:disabled { background: #8aa8c0; }
-			.inat-crop-trigger.inat-btn-green {
-				background: #74ac00; color: white; border: none;
-			}
-			.inat-crop-trigger.inat-btn-green:hover:not(:disabled) { background: #5a8a00; }
-			.inat-crop-trigger.inat-btn-green:disabled { background: #a3c964; }
-			.inat-crop-trigger.inat-btn-outlined {
-				background: #fff; color: #333; border: 1px solid #999;
-			}
-			.inat-crop-trigger.inat-btn-outlined:hover:not(:disabled) { background: #f0f0f0; border-color: #666; }
-			.inat-crop-trigger.inat-btn-outlined:disabled { background: #f5f5f5; color: #999; border-color: #ccc; }
 			.inat-crop-trigger svg {
 				width: 16px;
 				height: 16px;
@@ -226,6 +206,28 @@ chrome.storage.sync.get({
 			.inat-crop-results-list .view-link:hover {
 				text-decoration: underline;
 			}
+			/* Color presets — doubled selectors for higher specificity so they
+			   always override base button styles regardless of injection order */
+			.inat-btn-grey.inat-btn-grey {
+				background: #555; color: white; border: none;
+			}
+			.inat-btn-grey.inat-btn-grey:hover:not(:disabled) { background: #3a3a3a; }
+			.inat-btn-grey.inat-btn-grey:disabled { background: #999; }
+			.inat-btn-blue.inat-btn-blue {
+				background: #4a7298; color: white; border: none;
+			}
+			.inat-btn-blue.inat-btn-blue:hover:not(:disabled) { background: #385a78; }
+			.inat-btn-blue.inat-btn-blue:disabled { background: #8aa8c0; }
+			.inat-btn-green.inat-btn-green {
+				background: #74ac00; color: white; border: none;
+			}
+			.inat-btn-green.inat-btn-green:hover:not(:disabled) { background: #5a8a00; }
+			.inat-btn-green.inat-btn-green:disabled { background: #a3c964; }
+			.inat-btn-outlined.inat-btn-outlined {
+				background: #fff; color: #333; border: 1px solid #999;
+			}
+			.inat-btn-outlined.inat-btn-outlined:hover:not(:disabled) { background: #f0f0f0; border-color: #666; }
+			.inat-btn-outlined.inat-btn-outlined:disabled { background: #f5f5f5; color: #999; border-color: #ccc; }
 		`;
 
 		const target = document.head || document.documentElement;
@@ -261,7 +263,7 @@ chrome.storage.sync.get({
 						</div>
 						<div class="inat-crop-buttons">
 							<button class="inat-crop-btn inat-crop-cancel">Cancel</button>
-							<button class="inat-crop-btn inat-crop-submit">Get CV Suggestions</button>
+							<button class="inat-crop-btn inat-crop-submit inat-btn-${buttonColor}">Get CV Suggestions</button>
 						</div>
 					</div>
 				</div>
@@ -427,12 +429,7 @@ chrome.storage.sync.get({
 				background: #f0f0f0;
 			}
 			.inat-crop-submit {
-				background: #74ac00;
-				color: white;
-				border-color: #74ac00;
-			}
-			.inat-crop-submit:hover {
-				background: #5a8a00;
+				font-weight: 500;
 			}
 			.inat-crop-result {
 				padding: 16px;
