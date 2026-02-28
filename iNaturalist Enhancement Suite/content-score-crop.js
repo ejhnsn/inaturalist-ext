@@ -2,11 +2,16 @@
 // Adds buttons to observation photos for getting computer vision suggestions
 
 chrome.storage.sync.get({
-	enableScoreImageTools: true
+	enableScoreImageTools: true,
+	scoreImagePosition: 'below',
+	scoreImageColor: 'outlined'
 }, function(items) {
 	if (!items.enableScoreImageTools) {
 		return;
 	}
+
+	const buttonPosition = items.scoreImagePosition;
+	const buttonColor = items.scoreImageColor;
 
 	// Use shared logging from logging.js
 	const log = window.iNatLog || console.log;
@@ -37,13 +42,14 @@ chrome.storage.sync.get({
 				display: flex;
 				justify-content: center;
 				gap: 8px;
-				padding: 8px 0;
+				padding: 4px 0;
 				position: relative;
 			}
+			.inat-crop-trigger-container + .image-gallery {
+				padding-top: 0 !important;
+				padding-bottom: 20px !important;
+			}
 			.inat-crop-trigger {
-				background: #74ac00;
-				color: white;
-				border: none;
 				padding: 8px 16px;
 				border-radius: 4px;
 				font-size: 13px;
@@ -52,10 +58,11 @@ chrome.storage.sync.get({
 				display: inline-flex;
 				align-items: center;
 				gap: 6px;
-				transition: background 0.2s;
+				transition: background 0.2s, border-color 0.2s;
 			}
-			.inat-crop-trigger:hover {
-				background: #5a8a00;
+			.inat-crop-trigger:disabled {
+				cursor: default;
+				opacity: 0.5;
 			}
 			.inat-crop-trigger svg {
 				width: 16px;
@@ -203,6 +210,28 @@ chrome.storage.sync.get({
 			.inat-crop-results-list .view-link:hover {
 				text-decoration: underline;
 			}
+			/* Color presets — doubled selectors for higher specificity so they
+			   always override base button styles regardless of injection order */
+			.inat-btn-grey.inat-btn-grey {
+				background: #555; color: white; border: none;
+			}
+			.inat-btn-grey.inat-btn-grey:hover:not(:disabled) { background: #3a3a3a; }
+			.inat-btn-grey.inat-btn-grey:disabled { background: #999; }
+			.inat-btn-blue.inat-btn-blue {
+				background: #4a7298; color: white; border: none;
+			}
+			.inat-btn-blue.inat-btn-blue:hover:not(:disabled) { background: #385a78; }
+			.inat-btn-blue.inat-btn-blue:disabled { background: #8aa8c0; }
+			.inat-btn-green.inat-btn-green {
+				background: #74ac00; color: white; border: none;
+			}
+			.inat-btn-green.inat-btn-green:hover:not(:disabled) { background: #5a8a00; }
+			.inat-btn-green.inat-btn-green:disabled { background: #a3c964; }
+			.inat-btn-outlined.inat-btn-outlined {
+				background: #fff; color: #333; border: 1px solid #999;
+			}
+			.inat-btn-outlined.inat-btn-outlined:hover:not(:disabled) { background: #f0f0f0; border-color: #666; }
+			.inat-btn-outlined.inat-btn-outlined:disabled { background: #f5f5f5; color: #999; border-color: #ccc; }
 		`;
 
 		const target = document.head || document.documentElement;
@@ -219,6 +248,10 @@ chrome.storage.sync.get({
 				<div class="inat-crop-container">
 					<div class="inat-crop-header">
 						<h3>Crop Image for Computer Vision</h3>
+						<div class="inat-crop-toolbar">
+							<button class="inat-crop-btn inat-crop-rotate-left" title="Rotate left">&#x21BA;</button>
+							<button class="inat-crop-btn inat-crop-rotate-right" title="Rotate right">&#x21BB;</button>
+						</div>
 						<button class="inat-crop-close">&times;</button>
 					</div>
 					<div class="inat-crop-body">
@@ -234,7 +267,7 @@ chrome.storage.sync.get({
 						</div>
 						<div class="inat-crop-buttons">
 							<button class="inat-crop-btn inat-crop-cancel">Cancel</button>
-							<button class="inat-crop-btn inat-crop-submit">Get CV Suggestions</button>
+							<button class="inat-crop-btn inat-crop-submit inat-btn-${buttonColor}">Get CV Suggestions</button>
 						</div>
 					</div>
 				</div>
@@ -367,6 +400,22 @@ chrome.storage.sync.get({
 				color: #666;
 				margin-bottom: 12px;
 			}
+			.inat-crop-toolbar {
+				display: flex;
+				gap: 4px;
+				margin-left: auto;
+				margin-right: 12px;
+			}
+			.inat-crop-btn.inat-crop-rotate-left,
+			.inat-crop-btn.inat-crop-rotate-right {
+				width: 32px;
+				height: 32px;
+				padding: 0;
+				font-size: 18px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
 			.inat-crop-buttons {
 				display: flex;
 				justify-content: flex-end;
@@ -384,12 +433,7 @@ chrome.storage.sync.get({
 				background: #f0f0f0;
 			}
 			.inat-crop-submit {
-				background: #74ac00;
-				color: white;
-				border-color: #74ac00;
-			}
-			.inat-crop-submit:hover {
-				background: #5a8a00;
+				font-weight: 500;
 			}
 			.inat-crop-result {
 				padding: 16px;
@@ -464,6 +508,16 @@ chrome.storage.sync.get({
 	const scoreResultsCache = new Map(); // Cache CV results by image URL
 	let scoreResultsVisible = false;
 
+	// Capture observation location from API responses. domContext.js intercepts
+	// iNaturalist's fetch calls and dispatches observationFetch with the location
+	// string ("lat,lng"). This fires reliably on both observation and identify pages,
+	// before MapDetails renders.
+	let lastObservationLocation = null;
+	document.addEventListener('observationFetch', (event) => {
+		lastObservationLocation = event.detail?.location || null;
+		log('Observation location updated:', lastObservationLocation);
+	});
+
 	// Ensure modal exists and event listeners are set up
 	function ensureModalExists() {
 		if (!modal) {
@@ -478,6 +532,18 @@ chrome.storage.sync.get({
 			modal.querySelector('.inat-crop-cancel').addEventListener('click', closeCropModal);
 			modal.querySelector('.inat-crop-overlay').addEventListener('click', closeCropModal);
 			modal.querySelector('.inat-crop-submit').addEventListener('click', handleCrop);
+			modal.querySelector('.inat-crop-rotate-left').addEventListener('click', () => {
+				if (cropper) {
+					cropper.rotate(-90);
+					cvResultsCache = null;
+				}
+			});
+			modal.querySelector('.inat-crop-rotate-right').addEventListener('click', () => {
+				if (cropper) {
+					cropper.rotate(90);
+					cvResultsCache = null;
+				}
+			});
 			modal.querySelector('.inat-crop-results-close').addEventListener('click', () => {
 				modal.querySelector('.inat-crop-results').classList.remove('visible');
 			});
@@ -872,6 +938,38 @@ chrome.storage.sync.get({
 			return;
 		}
 
+		// Detect the user's name display preference from iNat's own rendered elements.
+		// iNat's SplitTaxon component puts `display-name` on whichever name is primary.
+		const splitTaxon = document.querySelector('.SplitTaxon');
+		const sciIsDisplay = !!splitTaxon?.querySelector('.sciname.display-name');
+		const hasCommon = !!splitTaxon?.querySelector('.comname');
+		// "scientific only" = sci is display-name and no common name element rendered
+		// "scientific first" = sci is display-name but common name is also shown
+		// "common first" = common name is display-name (default)
+		const nameStyle = sciIsDisplay
+			? (hasCommon ? 'scientific first' : 'scientific only')
+			: 'common first';
+		log('Name display preference:', nameStyle);
+
+		function formatTaxonName(commonName, scientificName, rankName) {
+			if (nameStyle === 'scientific only' || !commonName) {
+				return `
+					<div class="result-name"><em>${scientificName}</em></div>
+					<div class="result-rank">${rankName}</div>
+				`;
+			}
+			if (nameStyle === 'scientific first') {
+				return `
+					<div class="result-name"><em>${scientificName}</em></div>
+					<div class="result-rank">${commonName}</div>
+				`;
+			}
+			return `
+				<div class="result-name">${commonName}</div>
+				<div class="result-rank"><em>${scientificName}</em></div>
+			`;
+		}
+
 		// Build the HTML
 		let html = '';
 
@@ -890,8 +988,7 @@ chrome.storage.sync.get({
 					<div class="result-border" style="background: #74ac00;"></div>
 					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : '<div class="result-photo"></div>'}
 					<div class="result-info">
-						<div class="result-name">${commonName || scientificName}</div>
-						<div class="result-rank">${rankName} <em>${scientificName}</em></div>
+						${formatTaxonName(commonName, scientificName, rankName)}
 					</div>
 					${ancestorScore ? `<span class="result-score">${ancestorScore.toFixed(1)}%</span>` : ''}
 					<a class="view-link" href="https://www.inaturalist.org/taxa/${ancestor.id}" target="_blank" onclick="event.stopPropagation();">View</a>
@@ -922,28 +1019,12 @@ chrome.storage.sync.get({
 			// Calculate color based on score
 			const hue = score * 1.2;
 
-			// Display format depends on whether there's a common name:
-			// - With common name: common name on top, scientific name (italic) below
-			// - Without common name: scientific name on top, rank below
-			let nameHtml;
-			if (commonName) {
-				nameHtml = `
-					<div class="result-name">${commonName}</div>
-					<div class="result-rank"><em>${scientificName}</em></div>
-				`;
-			} else {
-				nameHtml = `
-					<div class="result-name">${scientificName}</div>
-					<div class="result-rank">${rankName}</div>
-				`;
-			}
-
 			return `
 				<li class="result-item" data-score="${score}" data-taxon-id="${taxon.id}">
 					<div class="result-border" style="background: hsl(${hue}, 50%, 50%);"></div>
 					${photoUrl ? `<img class="result-photo" src="${photoUrl}" alt="">` : '<div class="result-photo"></div>'}
 					<div class="result-info">
-						${nameHtml}
+						${formatTaxonName(commonName, scientificName, rankName)}
 						${tagsHtml}
 					</div>
 					<span class="result-score">${score.toFixed(1)}%</span>
@@ -1061,24 +1142,17 @@ chrome.storage.sync.get({
 			observed_on: null
 		};
 
-		// Try to get coordinates from the map details
-		const latEl = document.querySelector('.MapDetails .lat_lng .lat');
-		const lngEl = document.querySelector('.MapDetails .lat_lng .lng');
-		if (latEl && lngEl) {
-			metadata.lat = latEl.textContent.trim();
-			metadata.lng = lngEl.textContent.trim();
-		}
-
-		// Fallback: try to parse from the location string in the details
-		if (!metadata.lat) {
-			const locationValue = document.querySelector('.MapDetails .value');
-			if (locationValue) {
-				const match = locationValue.textContent.match(/([-\d.]+),\s*([-\d.]+)/);
-				if (match) {
-					metadata.lat = match[1];
-					metadata.lng = match[2];
-				}
+		// Use location from the most recent observationFetch event (fired by domContext.js
+		// when iNaturalist fetches observation data). Format is "lat,lng".
+		if (lastObservationLocation) {
+			const match = lastObservationLocation.match(/([-\d.]+),\s*([-\d.]+)/);
+			if (match) {
+				metadata.lat = match[1];
+				metadata.lng = match[2];
+				log('getObservationMetadata: coordinates from API:', metadata.lat, metadata.lng);
 			}
+		} else {
+			logWarn('getObservationMetadata: no observation location available');
 		}
 
 		// Try to get the observation date from time element's datetime attribute
@@ -1243,114 +1317,142 @@ chrome.storage.sync.get({
 		return metaToken && metaToken.content;
 	}
 
-	// Create and add the crop button to a stable location
-	function addScoreAndCropButtons() {
-		// Inject styles first
-		injectButtonStyles();
+	// Create the button container and buttons (once)
+	let buttonContainer = null;
+	let scoreButton = null;
+	let cropButton = null;
 
-		// Don't add if already exists
-		if (document.querySelector('.inat-crop-trigger-container')) {
-			return;
-		}
+	function createButtons() {
+		if (buttonContainer) return buttonContainer;
 
-		// Find a stable container to add buttons to
-		// On identify page, use obs-media (stable) not photos-wrapper (replaced on navigation)
-		let targetContainer = null;
-		let insertAfterElement = null;
+		buttonContainer = document.createElement('div');
+		buttonContainer.className = 'inat-crop-trigger-container';
 
-		const obsMedia = document.querySelector('.obs-media');
-		if (obsMedia) {
-			// Identify modal - add to obs-media after photos-wrapper
-			targetContainer = obsMedia;
-			insertAfterElement = obsMedia.querySelector('.photos-wrapper');
-		} else {
-			// Regular observation page - add after image-gallery
-			const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
-			for (const selector of selectors) {
-				targetContainer = document.querySelector(selector);
-				if (targetContainer) {
-					insertAfterElement = targetContainer;
-					targetContainer = targetContainer.parentNode;
-					break;
-				}
-			}
-		}
+		const colorClass = `inat-btn-${buttonColor}`;
 
-		if (!targetContainer || !insertAfterElement) {
-			log('No suitable container found for Score/Crop buttons');
-			return;
-		}
-
-		// Create button container
-		const container = document.createElement('div');
-		container.className = 'inat-crop-trigger-container';
-
-		// Score Image button (left)
-		const scoreButton = document.createElement('button');
-		scoreButton.className = 'inat-crop-trigger';
+		scoreButton = document.createElement('button');
+		scoreButton.className = `inat-crop-trigger ${colorClass}`;
 		scoreButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 				<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
 			</svg>
 			Score Image
 		`;
-
 		scoreButton.addEventListener('click', function(e) {
 			e.preventDefault();
 			e.stopPropagation();
-
 			const imageUrl = getCurrentPhotoUrl();
 			if (!imageUrl) {
 				alert('Could not find photo to score');
 				return;
 			}
-
-			scoreCurrentImage(imageUrl, container);
+			scoreCurrentImage(imageUrl, buttonContainer);
 		});
 
-		// Crop button (right)
-		const cropButton = document.createElement('button');
-		cropButton.className = 'inat-crop-trigger';
+		cropButton = document.createElement('button');
+		cropButton.className = `inat-crop-trigger ${colorClass}`;
 		cropButton.innerHTML = `
 			<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
 				<path d="M17 15h2V7c0-1.1-.9-2-2-2H9v2h8v8zM7 17V1H5v4H1v2h4v10c0 1.1.9 2 2 2h10v4h2v-4h4v-2H7z"/>
 			</svg>
 			Crop for CV
 		`;
-
 		cropButton.addEventListener('click', function(e) {
 			e.preventDefault();
 			e.stopPropagation();
-
 			const imageUrl = getCurrentPhotoUrl();
 			if (!imageUrl) {
 				alert('Could not find photo to crop');
 				return;
 			}
-
-			// Close score results if open
 			closeScoreResults();
-
 			loadCropperCSS();
 			openCropModal(imageUrl);
 		});
 
-		container.appendChild(scoreButton);
-		container.appendChild(cropButton);
-
-		// Insert after the specified element within the target container
-		targetContainer.insertBefore(container, insertAfterElement.nextSibling);
+		buttonContainer.appendChild(scoreButton);
+		buttonContainer.appendChild(cropButton);
 
 		// Close score results panel when clicking outside
 		document.addEventListener('click', (e) => {
 			if (scoreResultsVisible && scoreResultsPanel) {
-				if (!scoreResultsPanel.contains(e.target) && !container.contains(e.target)) {
+				if (!scoreResultsPanel.contains(e.target) && !buttonContainer.contains(e.target)) {
 					closeScoreResults();
 				}
 			}
 		});
 
-		log('Score and Crop buttons added');
+		return buttonContainer;
+	}
+
+	// Check whether the current slide is a sound and disable/enable buttons accordingly.
+	// Sound-only observations have no image slides at all; mixed observations may have
+	// the sound slide currently selected.
+	function updateButtonState() {
+		if (!scoreButton || !cropButton) return;
+
+		const hasImages = !!getCurrentPhotoUrl();
+		const centerSlide = document.querySelector('.image-gallery-slide.center');
+		const isSoundSlide = centerSlide && !!centerSlide.querySelector('.sound-container');
+		const shouldDisable = !hasImages || isSoundSlide;
+
+		scoreButton.disabled = shouldDisable;
+		cropButton.disabled = shouldDisable;
+	}
+
+	// Place buttons in the DOM and ensure correct position
+	function addScoreAndCropButtons() {
+		injectButtonStyles();
+		const container = createButtons();
+
+		const obsMedia = document.querySelector('.obs-media');
+		if (obsMedia) {
+			// Identify page
+			const photosWrapper = obsMedia.querySelector('.photos-wrapper');
+			const sounds = obsMedia.querySelector('.sounds');
+			if (buttonPosition === 'above') {
+				const target = photosWrapper || sounds;
+				if (target) {
+					target.before(container);
+				} else {
+					obsMedia.prepend(container);
+				}
+			} else {
+				const insertAfter = photosWrapper || sounds;
+				if (insertAfter) {
+					insertAfter.after(container);
+				} else {
+					obsMedia.prepend(container);
+				}
+			}
+		} else {
+			// Observation page
+			if (container.parentNode) return; // already placed
+			const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
+			for (const selector of selectors) {
+				const gallery = document.querySelector(selector);
+				if (gallery) {
+					if (buttonPosition === 'above') {
+						gallery.before(container);
+					} else {
+						gallery.after(container);
+					}
+					break;
+				}
+			}
+		}
+
+		updateButtonState();
+
+		// Watch for slide changes (mixed image+audio) to toggle disabled state
+		const slidesContainer = document.querySelector('.image-gallery-slides');
+		if (slidesContainer && !slidesContainer._inatObserved) {
+			slidesContainer._inatObserved = true;
+			new MutationObserver(updateButtonState)
+				.observe(slidesContainer, { attributes: true, subtree: true, attributeFilter: ['class'] });
+		}
+
+		log('Score and Crop buttons positioned');
 	}
 
 	// Watch for the photo gallery to appear
@@ -1371,18 +1473,44 @@ chrome.storage.sync.get({
 			}
 		});
 
-		// Wait for the gallery/photo elements to load, then add our button
+		// Wait for the gallery/photo elements to load, then add our buttons
 		const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
-
 		for (const selector of selectors) {
 			document.arrive(selector, { existing: true }, function() {
-				// Small delay to ensure the gallery is fully rendered
 				setTimeout(() => {
 					addScoreAndCropButtons();
 					prefetchGalleryImages();
 				}, 100);
 			});
 		}
+
+		// On the identify page, .obs-media is stable but its children get rebuilt on
+		// observation navigation. Watch for child changes to reposition buttons and
+		// update their enabled/disabled state (handles sound-only observations too).
+		document.arrive('.obs-media', { existing: true }, function() {
+			const obsMedia = this;
+			let repositioning = false;
+
+			addScoreAndCropButtons();
+
+			new MutationObserver((mutations) => {
+				if (repositioning) return;
+				// Ignore mutations caused by our own button container
+				const isOwnMutation = mutations.every(m =>
+					[...m.addedNodes, ...m.removedNodes].every(n =>
+						n === buttonContainer
+					)
+				);
+				if (isOwnMutation) return;
+
+				repositioning = true;
+				setTimeout(() => {
+					addScoreAndCropButtons();
+					prefetchGalleryImages();
+					repositioning = false;
+				}, 100);
+			}).observe(obsMedia, { childList: true });
+		});
 
 		log('Score Image & Crop initialized');
 	}

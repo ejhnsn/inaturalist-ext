@@ -46,32 +46,6 @@ chrome.storage.sync.get({
 	}
 
 
-	if (items.enableCopyGeo) {
-		document.arrive('.MapDetails > .top_info', async div => {
-			let lat, long;
-			for (const child of div.children) {
-				const attr = child.querySelector('.attr');
-				if (attr) {
-					if (attr.innerHTML.startsWith('Lat')) {
-						lat = child.querySelector('.value').innerHTML;
-					} else if (attr.innerHTML.startsWith('Lon')) {
-						long = child.querySelector('.value').innerHTML;
-					}
-				}
-			}
-
-			if (lat !== undefined && long !== undefined) {
-				const button = document.createElement('button');
-				button.innerHTML = 'Copy';
-				button.onclick = async function() {
-					await navigator.clipboard.writeText(`${lat},${long}`);
-				}
-
-				div.appendChild(button);
-			}
-		});
-	}
-
 	let location;
 	let computerVisionResults = new Map();
 
@@ -85,19 +59,31 @@ chrome.storage.sync.get({
 				if (location) {
 					const ul = document.querySelector(".map-and-details .details ul:not([role])");
 					if (ul) {
-						const buttonClass = 'copy-geo';
-						if (!ul.querySelector('.' + buttonClass)) {
+						const itemClass = 'copy-geo-item';
+						let li = ul.querySelector('.' + itemClass);
+						if (!li) {
+							li = document.createElement('li');
+							li.className = itemClass;
+
 							const button = document.createElement('button');
-							button.innerHTML = 'Copy geocoordinates';
-							button.className = buttonClass;
+							button.className = 'btn btn-xs btn-default';
+							button.title = 'Copy to clipboard';
+							button.innerHTML = '<i class="fa fa-clipboard"></i>';
+							button.style.marginLeft = '-20px';
 							button.onclick = async function() {
 								await navigator.clipboard.writeText(location);
 							}
-
-							const li = document.createElement('li');
 							li.appendChild(button);
+
+							const label = document.createElement('span');
+							label.style.marginLeft = '4px';
+							li.appendChild(label);
+
 							ul.appendChild(li);
 						}
+
+						const [lat, lng] = location.split(',');
+						li.querySelector('span').textContent = `Lat/Lon: ${parseFloat(lat).toFixed(5)}, ${parseFloat(lng).toFixed(5)}`;
 					}
 				}
 			}
