@@ -547,33 +547,33 @@ chrome.storage.sync.get({
 			modal.querySelector('.inat-crop-results-close').addEventListener('click', () => {
 				modal.querySelector('.inat-crop-results').classList.remove('visible');
 			});
-
-			// Handle Escape key - stop propagation to prevent closing parent modals
-			document.addEventListener('keydown', (e) => {
-				if (e.key === 'Escape') {
-					// First check standalone score results panel
-					if (scoreResultsVisible) {
-						e.stopPropagation();
-						e.preventDefault();
-						closeScoreResults();
-						return;
-					}
-					// Then check modal
-					if (modal.classList.contains('active')) {
-						e.stopPropagation();
-						e.preventDefault();
-						const resultsEl = modal.querySelector('.inat-crop-results');
-						if (resultsEl.classList.contains('visible')) {
-							resultsEl.classList.remove('visible');
-						} else {
-							closeCropModal();
-						}
-					}
-				}
-			}, true); // Use capture phase to intercept before iNaturalist's handlers
 		}
 
 		return modal;
+	}
+
+	// Escape closes our score-results panel or crop modal. Registered eagerly at
+	// init time (not lazily inside ensureModalExists) so it works on the first
+	// Score Image click — otherwise it'd only fire after the user had also opened
+	// the crop modal at least once in this page lifetime.
+	function handleEscapeKey(e) {
+		if (e.key !== 'Escape') return;
+		if (scoreResultsVisible) {
+			e.stopPropagation();
+			e.preventDefault();
+			closeScoreResults();
+			return;
+		}
+		if (modal && modal.classList.contains('active')) {
+			e.stopPropagation();
+			e.preventDefault();
+			const resultsEl = modal.querySelector('.inat-crop-results');
+			if (resultsEl.classList.contains('visible')) {
+				resultsEl.classList.remove('visible');
+			} else {
+				closeCropModal();
+			}
+		}
 	}
 
 	function openCropModal(imageUrl) {
@@ -1472,6 +1472,9 @@ chrome.storage.sync.get({
 				setTimeout(() => prefetchGalleryImages(), 500);
 			}
 		});
+
+		// Capture phase so we run before iNaturalist's own modal Escape handlers.
+		document.addEventListener('keydown', handleEscapeKey, true);
 
 		// Wait for the gallery/photo elements to load, then add our buttons
 		const selectors = ['.image-gallery', '.PhotoBrowser', '.ObservationMedia'];
