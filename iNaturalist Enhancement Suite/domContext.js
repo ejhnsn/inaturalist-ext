@@ -59,6 +59,32 @@ HTMLCanvasElement.prototype.toBlob = function() {
 	HTMLCanvasElement.prototype.toBlobOriginal.apply(this, arguments); 
 };
 
+// Once iNat's I18n global has loaded with the page's translations, broadcast
+// the locale-dependent values our isolated-world content scripts need (they
+// can't see window.I18n from their own world). i18n-js v3 ships translations
+// via inline <script> tags rendered by Rails, so they're synchronously
+// available by DOMContentLoaded. The detail dict is the natural place to add
+// more I18n keys if other features need them later.
+function inatExtBroadcastI18n() {
+	let timeHours = '';
+	try {
+		if (window.I18n && typeof window.I18n.t === 'function') {
+			timeHours = window.I18n.t('momentjs.time_hours') || '';
+		}
+	} catch (e) {
+		// I18n not loaded; leave timeHours empty
+	}
+	document.dispatchEvent(new CustomEvent('inatExtI18n', {
+		detail: { timeHours }
+	}));
+}
+
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', inatExtBroadcastI18n, { once: true });
+} else {
+	inatExtBroadcastI18n();
+}
+
 // Get the iNaturalist API token from the page
 function getApiToken() {
 	const metaToken = document.querySelector('meta[name="inaturalist-api-token"]');

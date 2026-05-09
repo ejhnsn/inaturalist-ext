@@ -9,6 +9,7 @@ function saveOptions() {
     const enableCount = document.getElementById('your-observations-count').checked;
     const enableCopyGeo = document.getElementById('copy-geocoordinates').checked;
     const enableIdentifierStats = document.getElementById('identifier-stats').checked;
+    const enableFilenameDate = document.getElementById('filename-date').checked;
     const enableLogging = document.getElementById('enable-logging').checked;
     chrome.storage.sync.set({
         enableColorVision,
@@ -21,6 +22,7 @@ function saveOptions() {
         enableCount,
         enableCopyGeo,
         enableIdentifierStats,
+        enableFilenameDate,
         enableLogging
     }, function() {
         const status = document.getElementById('status');
@@ -43,6 +45,7 @@ function restoreOptions() {
         enableCount: true,
         enableCopyGeo: true,
         enableIdentifierStats: true,
+        enableFilenameDate: true,
         enableLogging: false
     }, function(items) {
         document.getElementById('color-vision').checked = items.enableColorVision;
@@ -56,6 +59,7 @@ function restoreOptions() {
         document.getElementById('your-observations-count').checked = items.enableCount;
         document.getElementById('copy-geocoordinates').checked = items.enableCopyGeo;
         document.getElementById('identifier-stats').checked = items.enableIdentifierStats;
+        document.getElementById('filename-date').checked = items.enableFilenameDate;
         colorVisionFeature.dispatchEvent(new Event('change'));
         scoreImageFeature.dispatchEvent(new Event('change'));
     });
