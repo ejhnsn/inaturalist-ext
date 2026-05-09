@@ -411,7 +411,7 @@ const oldFetch = window.fetch;
 window.fetch = async (url, options) => {
     const response = await oldFetch(url, options);
 	try {
-		if (url.match(/^https:\/\/api.inaturalist.org\/v\d+\/computervision/i)) {
+		if (url.match(/^https:\/\/api\.inaturalist\.org\/v\d+\/computervision/i)) {
 			const data = await response.clone().json();
 			if (data) {
 				let filename = null;
@@ -437,7 +437,9 @@ window.fetch = async (url, options) => {
 				);
 			}
 		} else {
-			const observationMatch = url.match(/^https:\/\/api.inaturalist.org\/v\d+\/observations\/\d+/i);
+			// Match both v1 numeric ids (e.g. /v1/observations/12345) and v2
+			// UUIDs (e.g. /v2/observations/de2a3f5c-2f45-46a5-925f-241ed6b945d3).
+			const observationMatch = url.match(/^https:\/\/api\.inaturalist\.org\/v\d+\/observations\/[\w-]+/i);
 			if (observationMatch) {
 				const data = await response.clone().json();
 				if (data && data.results && data.results.length && data.results[0]) {
