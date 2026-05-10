@@ -59,6 +59,32 @@ HTMLCanvasElement.prototype.toBlob = function() {
 	HTMLCanvasElement.prototype.toBlobOriginal.apply(this, arguments); 
 };
 
+// Once iNat's I18n global has loaded with the page's translations, broadcast
+// the locale-dependent values our isolated-world content scripts need (they
+// can't see window.I18n from their own world). i18n-js v3 ships translations
+// via inline <script> tags rendered by Rails, so they're synchronously
+// available by DOMContentLoaded. The detail dict is the natural place to add
+// more I18n keys if other features need them later.
+function inatExtBroadcastI18n() {
+	let timeHours = '';
+	try {
+		if (window.I18n && typeof window.I18n.t === 'function') {
+			timeHours = window.I18n.t('momentjs.time_hours') || '';
+		}
+	} catch (e) {
+		// I18n not loaded; leave timeHours empty
+	}
+	document.dispatchEvent(new CustomEvent('inatExtI18n', {
+		detail: { timeHours }
+	}));
+}
+
+if (document.readyState === 'loading') {
+	document.addEventListener('DOMContentLoaded', inatExtBroadcastI18n, { once: true });
+} else {
+	inatExtBroadcastI18n();
+}
+
 // Get the iNaturalist API token from the page
 function getApiToken() {
 	const metaToken = document.querySelector('meta[name="inaturalist-api-token"]');
@@ -385,7 +411,7 @@ const oldFetch = window.fetch;
 window.fetch = async (url, options) => {
     const response = await oldFetch(url, options);
 	try {
-		if (url.match(/^https:\/\/api.inaturalist.org\/v\d+\/computervision/i)) {
+		if (url.match(/^https:\/\/api\.inaturalist\.org\/v\d+\/computervision/i)) {
 			const data = await response.clone().json();
 			if (data) {
 				let filename = null;
@@ -411,7 +437,9 @@ window.fetch = async (url, options) => {
 				);
 			}
 		} else {
-			const observationMatch = url.match(/^https:\/\/api.inaturalist.org\/v\d+\/observations\/\d+/i);
+			// Match both v1 numeric ids (e.g. /v1/observations/12345) and v2
+			// UUIDs (e.g. /v2/observations/de2a3f5c-2f45-46a5-925f-241ed6b945d3).
+			const observationMatch = url.match(/^https:\/\/api\.inaturalist\.org\/v\d+\/observations\/[\w-]+/i);
 			if (observationMatch) {
 				const data = await response.clone().json();
 				if (data && data.results && data.results.length && data.results[0]) {
