@@ -11,7 +11,8 @@ chrome.storage.sync.get({
 		return;
 	}
 
-	document.arrive('.NumObservations > div > div > a.btn[href*="user_id"]', async a => {
+	// Match both legacy and responsive layouts regardless of wrapper depth.
+	document.arrive('.NumObservations a.btn[href*="user_id"]', async a => {
 		const href = a.href;
 		const userMatch = href.match(/[?&]user_id=([^&]+)/i);
 		if (!userMatch) {
